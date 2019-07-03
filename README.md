@@ -13,7 +13,7 @@ CMake supports out-of-source builds, which means that binaries are generated in 
 The typical approach is to create a `build` folder inside the project root folder after cloning it with git:
 ```
 git clone --recursive https://github.com/wangtzh/pibench.git
-cd nvm-data-structure
+cd pibench
 mkdir build
 ```
 
