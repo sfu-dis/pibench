@@ -99,8 +99,7 @@ void benchmark_t::run() noexcept
 
     std::vector<operation_t> op_pool;
     std::vector<const char *> value_ptr_pool;
-    std::vector<const char *> key_ptr_pool;
-
+    std::vector<char *> key_ptr_pool(opt_.num_ops, 0);
 
     std::unique_ptr<SystemCounterState> before_sstate;
     if (opt_.enable_pcm)
@@ -153,7 +152,8 @@ void benchmark_t::run() noexcept
                     auto value_ptr = value_generator_.next();
 
                     op_pool.push_back(op);
-                    key_ptr_pool.push_back(key_ptr);
+		    key_ptr_pool[i] = (char *)malloc(sizeof(char) * opt_.key_size);
+		    memcpy(key_ptr_pool[i], key_ptr, opt_.key_size);
                     value_ptr_pool.push_back(value_ptr);
                 }
 
@@ -224,6 +224,11 @@ void benchmark_t::run() noexcept
                     elapsed = sw.elapsed<std::chrono::milliseconds>();
                     finished = true;
                 }
+
+		#pragma omp for schedule(nonmonotonic : dynamic, 50)
+                for (uint64_t i = 0; i < opt_.num_ops; ++i) {
+		    free(key_ptr_pool[i]);
+		}
             }
         }
     }
