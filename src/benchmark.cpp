@@ -97,8 +97,8 @@ void benchmark_t::run() noexcept
     // Current id after load
     auto current_id = key_generator_->current_id_;
 
-    std::vector<operation_t> op_pool;
-    std::vector<const char *> value_ptr_pool;
+    std::vector<operation_t> op_pool(opt_.num_ops, operation_t::UNKNOWN);
+    std::vector<const char *> value_ptr_pool(opt_.num_ops, 0);
     std::vector<char *> key_ptr_pool(opt_.num_ops, 0);
 
     std::unique_ptr<SystemCounterState> before_sstate;
@@ -138,6 +138,8 @@ void benchmark_t::run() noexcept
 
                 // Initialize insert id for each thread
                 key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
+		
+		#pragma omp barrier 
 
 		#pragma omp for schedule(nonmonotonic : dynamic, 50)
                 for (uint64_t i = 0; i < opt_.num_ops; ++i)
@@ -151,12 +153,12 @@ void benchmark_t::run() noexcept
                     // Generate random value
                     auto value_ptr = value_generator_.next();
 
-                    op_pool.push_back(op);
+                    op_pool[i] = op;
 		    key_ptr_pool[i] = (char *)malloc(sizeof(char) * opt_.key_size);
 		    memcpy(key_ptr_pool[i], key_ptr, opt_.key_size);
-                    value_ptr_pool.push_back(value_ptr);
+                    value_ptr_pool[i] = value_ptr;
                 }
-
+		
                 #pragma omp barrier
 
                 #pragma omp single nowait
@@ -224,7 +226,7 @@ void benchmark_t::run() noexcept
                     elapsed = sw.elapsed<std::chrono::milliseconds>();
                     finished = true;
                 }
-
+		
 		#pragma omp for schedule(nonmonotonic : dynamic, 50)
                 for (uint64_t i = 0; i < opt_.num_ops; ++i) {
 		    free(key_ptr_pool[i]);

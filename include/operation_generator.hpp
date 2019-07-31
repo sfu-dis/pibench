@@ -13,7 +13,8 @@ enum class operation_t : uint8_t
     INSERT,
     UPDATE,
     REMOVE,
-    SCAN
+    SCAN,
+    UNKNOWN
 };
 
 class operation_generator_t
