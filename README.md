@@ -66,6 +66,9 @@ For example:
 
 `$ OMP_PLACES=cores OMP_PROC_BIND=true OMP_NESTED=true ./PiBench [...]`
 
+Note for clang users: you may need to additionally install OpenMP runtime, on Arch Linux this can be done by installing the package `extra/openmp`.
+
+
 # Running
 The `PiBench` executable is generated and supports the following arguments:
 ```
