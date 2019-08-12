@@ -40,6 +40,8 @@ public:
      */
     key_generator_t(size_t N, size_t size, const std::string& prefix = "");
 
+    virtual ~key_generator_t() = default;
+
     /**
      * @brief Generate next key.
      *
