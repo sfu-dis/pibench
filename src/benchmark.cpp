@@ -5,6 +5,7 @@
 #include <cassert>
 #include <iostream>
 #include <omp.h>
+#include <thread>
 
 namespace PiBench
 {
@@ -78,6 +79,8 @@ void benchmark_t::load() noexcept
               << "\tLoad time: " << elapsed << " milliseconds" << std::endl;
 }
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "openmp-use-default-none"
 void benchmark_t::run() noexcept
 {
     std::vector<stats_t> global_stats;
@@ -106,107 +109,96 @@ void benchmark_t::run() noexcept
 
     float elapsed = 0.0;
     stopwatch_t sw;
-    #pragma omp parallel sections num_threads(2)
+    std::thread monitor_thread([&]() {
+      std::chrono::milliseconds sampling_window(opt_.sampling_ms);
+      while (!finished) {
+        std::this_thread::sleep_for(sampling_window);
+        stats_t s;
+        s.operation_count =
+            std::accumulate(local_stats.begin(), local_stats.end(), 0,
+                            [](uint64_t sum, const stats_t &curr) {
+                              return sum + curr.operation_count;
+                            });
+        global_stats.push_back(std::move(s));
+      }
+    });
+
+#pragma omp parallel num_threads(opt_.num_threads) default(shared)
     {
-        #pragma omp section // Monitor thread
-        {
-            std::chrono::milliseconds sampling_window(opt_.sampling_ms);
-            while (!finished)
-            {
-                std::this_thread::sleep_for(sampling_window);
-                stats_t s;
-                s.operation_count = std::accumulate(local_stats.begin(), local_stats.end(), 0,
-                                                    [](uint64_t sum, const stats_t& curr) {
-                                                        return sum + curr.operation_count;
-                                                    });
-                global_stats.push_back(std::move(s));
-            }
+      auto tid = omp_get_thread_num();
+
+      // Initialize random seed for each thread
+      key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
+
+      // Initialize insert id for each thread
+      key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
+
+#pragma omp barrier
+
+#pragma omp single nowait
+      { sw.start(); }
+
+      // TODO: add warning. We expect at least 50 op per thread
+#pragma omp for schedule(nonmonotonic : dynamic, 50)
+      for (uint64_t i = 0; i < opt_.num_ops; ++i) {
+        // Generate random operation
+        auto op = op_generator_.next();
+
+        // Generate random scrambled key
+        auto key_ptr =
+            key_generator_->next(op == operation_t::INSERT ? true : false);
+
+        // Generate random value
+        auto value_ptr = value_generator_.next();
+
+        switch (op) {
+        case operation_t::READ: {
+          tree_->find(key_ptr, key_generator_->size(), value_out);
+          break;
         }
 
-        #pragma omp section // Worker threads
-        {
-            #pragma omp parallel num_threads(opt_.num_threads)
-            {
-                auto tid = omp_get_thread_num();
-
-                // Initialize random seed for each thread
-                key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
-
-                // Initialize insert id for each thread
-                key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
-
-                #pragma omp barrier
-
-                #pragma omp single nowait
-                {
-                    sw.start();
-                }
-
-                // TODO: add warning. We expect at least 50 op per thread
-                #pragma omp for schedule(nonmonotonic : dynamic, 50)
-                for (uint64_t i = 0; i < opt_.num_ops; ++i)
-                {
-                    // Generate random operation
-                    auto op = op_generator_.next();
-
-                    // Generate random scrambled key
-                    auto key_ptr = key_generator_->next(op == operation_t::INSERT ? true : false);
-
-                    // Generate random value
-                    auto value_ptr = value_generator_.next();
-
-                    switch (op)
-                    {
-                    case operation_t::READ:
-                    {
-                        tree_->find(key_ptr, key_generator_->size(), value_out);
-                        break;
-                    }
-
-                    case operation_t::INSERT:
-                    {
-                        auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                        break;
-                    }
-
-                    case operation_t::UPDATE:
-                    {
-                        auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                        break;
-                    }
-
-                    case operation_t::REMOVE:
-                    {
-                        auto r = tree_->remove(key_ptr, key_generator_->size());
-                        break;
-                    }
-
-                    case operation_t::SCAN:
-                    {
-                        auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
-                        break;
-                    }
-
-                    default:
-                        std::cout << "Error: unknown operation!" << std::endl;
-                        exit(0);
-                        break;
-                    }
-                    auto tid = omp_get_thread_num();
-                    ++local_stats[tid].operation_count;
-                }
-
-                // Get elapsed time and signal monitor thread to finish.
-                #pragma omp single nowait
-                {
-                    elapsed = sw.elapsed<std::chrono::milliseconds>();
-                    finished = true;
-                }
-            }
+        case operation_t::INSERT: {
+          auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr,
+                                 opt_.value_size);
+          break;
         }
+
+        case operation_t::UPDATE: {
+          auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr,
+                                 opt_.value_size);
+          break;
+        }
+
+        case operation_t::REMOVE: {
+          auto r = tree_->remove(key_ptr, key_generator_->size());
+          break;
+        }
+
+        case operation_t::SCAN: {
+          auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size,
+                               values_out);
+          break;
+        }
+
+        default:
+          std::cout << "Error: unknown operation!" << std::endl;
+          exit(0);
+          break;
+        }
+        auto tid = omp_get_thread_num();
+        ++local_stats[tid].operation_count;
+      }
+
+// Get elapsed time and signal monitor thread to finish.
+#pragma omp single nowait
+    {
+      elapsed = sw.elapsed<std::chrono::milliseconds>();
+      finished = true;
     }
+  }
 
-    std::unique_ptr<SystemCounterState> after_sstate;
+  monitor_thread.join();
+  std::unique_ptr<SystemCounterState> after_sstate;
     if (opt_.enable_pcm)
     {
         after_sstate = std::make_unique<SystemCounterState>();
@@ -238,6 +230,7 @@ void benchmark_t::run() noexcept
     for (auto s : global_stats)
         std::cout << "\t" << s.operation_count << std::endl;
 }
+#pragma clang diagnostic pop
 } // namespace PiBench
 
 namespace std
