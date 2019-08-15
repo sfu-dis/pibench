@@ -106,6 +106,7 @@ void benchmark_t::run() noexcept
 
     float elapsed = 0.0;
     stopwatch_t sw;
+    omp_set_nested(true);
     #pragma omp parallel sections num_threads(2)
     {
         #pragma omp section // Monitor thread
@@ -152,9 +153,6 @@ void benchmark_t::run() noexcept
                     // Generate random scrambled key
                     auto key_ptr = key_generator_->next(op == operation_t::INSERT ? true : false);
 
-                    // Generate random value
-                    auto value_ptr = value_generator_.next();
-
                     switch (op)
                     {
                     case operation_t::READ:
@@ -165,13 +163,17 @@ void benchmark_t::run() noexcept
 
                     case operation_t::INSERT:
                     {
-                        auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+                      // Generate random value
+                      auto value_ptr = value_generator_.next();
+                      auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
                         break;
                     }
 
                     case operation_t::UPDATE:
                     {
-                        auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+                      // Generate random value
+                      auto value_ptr = value_generator_.next();
+                      auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
                         break;
                     }
 
@@ -206,6 +208,7 @@ void benchmark_t::run() noexcept
         }
     }
 
+    omp_set_nested(false);
     std::unique_ptr<SystemCounterState> after_sstate;
     if (opt_.enable_pcm)
     {
