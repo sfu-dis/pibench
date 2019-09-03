@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(CTest)
+
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
   set(OpenMP_C "${CMAKE_C_COMPILER}")
   set(OpenMP_C_FLAGS "-fopenmp=libomp")
@@ -36,6 +38,10 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
 include_directories("${PROJECT_SOURCE_DIR}/include"
                     "${PROJECT_SOURCE_DIR}/pcm")
+
+if(BUILD_TESTING)
+    add_subdirectory(googletest)
+endif()
 
 # Example libraries
 add_library(dummy_wrapper SHARED wrappers/dummy/dummy_wrapper.cpp)
