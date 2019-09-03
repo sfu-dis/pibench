@@ -39,6 +39,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 include_directories("${PROJECT_SOURCE_DIR}/include"
                     "${PROJECT_SOURCE_DIR}/pcm")
 
+add_subdirectory(src)
+
 if(BUILD_TESTING)
     add_subdirectory(googletest)
 endif()
@@ -46,20 +48,3 @@ endif()
 # Example libraries
 add_library(dummy_wrapper SHARED wrappers/dummy/dummy_wrapper.cpp)
 add_library(stlmap_wrapper SHARED wrappers/stlmap/stlmap_wrapper.cpp)
-
-set(benchmark_SRC
-    src/key_generator.cpp
-    src/library_loader.cpp
-    src/main.cpp
-    src/benchmark.cpp
-    src/operation_generator.cpp
-    src/value_generator.cpp
-)
-
-add_executable(PiBench ${benchmark_SRC})
-add_dependencies(PiBench pcm)
-target_compile_options(PiBench PRIVATE ${OpenMP_CXX_FLAGS})
-target_link_libraries(PiBench PRIVATE
-    ${OpenMP_CXX_FLAGS}
-    ${PROJECT_SOURCE_DIR}/pcm/libPCM.a
-    dl)
