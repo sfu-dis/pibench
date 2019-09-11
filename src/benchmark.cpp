@@ -59,6 +59,12 @@ benchmark_t::~benchmark_t()
 
 void benchmark_t::load() noexcept
 {
+    if(opt_.skip_load)
+    {
+        key_generator_->current_id_ = opt_.num_records + 1;
+        return;
+    }
+
     stopwatch_t sw;
     sw.start();
     for (uint32_t i = 0; i < opt_.num_records; ++i)
