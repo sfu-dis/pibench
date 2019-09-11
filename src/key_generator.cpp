@@ -7,7 +7,7 @@ namespace PiBench
 thread_local std::default_random_engine key_generator_t::generator_;
 thread_local uint32_t key_generator_t::seed_;
 thread_local char key_generator_t::buf_[KEY_MAX];
-thread_local uint64_t key_generator_t::current_id_ = 0;
+thread_local uint64_t key_generator_t::current_id_ = 1;
 
 key_generator_t::key_generator_t(size_t N, size_t size, const std::string& prefix)
     : N_(N),
