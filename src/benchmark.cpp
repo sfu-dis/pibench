@@ -98,10 +98,10 @@ void benchmark_t::run() noexcept
     bool finished = false;
 
     // The amount of inserts expected to be done by each thread + some play room.
-    auto inserts_per_thread = 10 + (opt_.num_ops * opt_.insert_ratio) / opt_.num_threads;
+    uint64_t inserts_per_thread = 10 + (opt_.num_ops * opt_.insert_ratio) / opt_.num_threads;
 
     // Current id after load
-    auto current_id = key_generator_->current_id_;
+    uint64_t current_id = key_generator_->current_id_;
 
     std::unique_ptr<SystemCounterState> before_sstate;
     if (opt_.enable_pcm)
