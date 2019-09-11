@@ -46,6 +46,7 @@ int main(int argc, char** argv)
             ("pcm", "Turn on Intel PCM", cxxopts::value<bool>()->default_value("true"))
             ("pool_path", "Path to persistent pool", cxxopts::value<std::string>()->default_value(""))
             ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value("0"))
+            ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value("false"))
             ("help", "Print help")
         ;
 
@@ -66,6 +67,16 @@ int main(int argc, char** argv)
         {
             opt.enable_pcm = true;
         }
+
+        if (result.count("skip_load"))
+        {
+            opt.skip_load = result["skip_load"].as<bool>();
+        }
+        else
+        {
+            opt.skip_load = false;
+        }
+
 
         if (result.count("input"))
         {
