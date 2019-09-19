@@ -218,6 +218,7 @@ void benchmark_t::run() noexcept
         *after_sstate = getSystemCounterState();
     }
 
+    std::cout << std::fixed << std::setprecision(4);
     std::cout << "\tRun time: " << elapsed << " milliseconds" << std::endl;
     std::cout << "\tThroughput: " << opt_.num_ops / ((float)elapsed / 1000)
               << " ops/s" << std::endl;
