@@ -5,6 +5,8 @@
 #include <cassert>
 #include <iostream>
 #include <omp.h>
+#include <functional> // std::bind
+#include <cmath>      // std::ceil
 
 namespace PiBench
 {
@@ -93,6 +95,8 @@ void benchmark_t::run() noexcept
     char* values_out;
 
     std::vector<stats_t> local_stats(opt_.num_threads);
+    for(auto& lc : local_stats)
+        lc.times.reserve(std::ceil(opt_.num_ops/opt_.num_threads)*2);
 
     // Control variable of monitor thread
     bool finished = false;
@@ -141,6 +145,8 @@ void benchmark_t::run() noexcept
                 // Initialize insert id for each thread
                 key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
 
+                auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
+
                 #pragma omp barrier
 
                 #pragma omp single nowait
@@ -159,6 +165,12 @@ void benchmark_t::run() noexcept
 
                     // Generate random value
                     auto value_ptr = value_generator_.next();
+
+                    auto measure_latency = random_bool();
+                    if(measure_latency)
+                    {
+                        local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
+                    }
 
                     switch (op)
                     {
@@ -197,7 +209,11 @@ void benchmark_t::run() noexcept
                         exit(0);
                         break;
                     }
-                    auto tid = omp_get_thread_num();
+
+                    if(measure_latency)
+                    {
+                        local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
+                    }
                     ++local_stats[tid].operation_count;
                 }
 
@@ -241,8 +257,29 @@ void benchmark_t::run() noexcept
                                  s.operation_count = x.operation_count - y.operation_count;
                                  return s;
                              });
+
     for (auto s : global_stats)
         std::cout << "\t" << s.operation_count << std::endl;
+
+    if(opt_.latency_sampling > 0.0)
+    {
+        std::vector<uint64_t> global_latencies;
+        for(auto& v : local_stats)
+            for(unsigned int i=0; i<v.times.size(); i=i+2)
+                global_latencies.push_back(std::chrono::nanoseconds(v.times[i+1]-v.times[i]).count());
+
+        std::sort(global_latencies.begin(), global_latencies.end());
+        auto observed = global_latencies.size();
+        std::cout << "Latencies (" << observed << " operations observed):\n"
+                  << "\tmin: " << global_latencies[0] << '\n'
+                  << "\t50%: " << global_latencies[0.5*observed] << '\n'
+                  << "\t90%: " << global_latencies[0.9*observed] << '\n'
+                  << "\t99%: " << global_latencies[0.99*observed] << '\n'
+                  << "\t99.9%: " << global_latencies[0.999*observed] << '\n'
+                  << "\t99.99%: " << global_latencies[0.9999*observed] << '\n'
+                  << "\t99.999%: " << global_latencies[0.99999*observed] << '\n'
+                  << "\tmax: " << global_latencies[observed-1] << std::endl;
+    }
 }
 } // namespace PiBench
 

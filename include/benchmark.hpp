@@ -10,6 +10,8 @@
 
 #include <cstdint>
 #include <memory> // For unique_ptr
+#include <chrono> // std::chrono::high_resolution_clock::time_point
+#include <vector>
 
 namespace PiBench
 {
@@ -84,6 +86,9 @@ struct options_t
 
     /// Whether to skip the load phase.
     bool skip_load;
+
+    /// Ratio of requests to sample latency from (between 0.0 and 1.0).
+    float latency_sampling;
 };
 
 /**
@@ -99,6 +104,9 @@ struct alignas(64) stats_t
 
     /// Number of operations completed.
     uint64_t operation_count;
+
+    /// Vector to store both start and end time of requests.
+    std::vector<std::chrono::high_resolution_clock::time_point> times;
 
     /// Padding to enforce cache-line size and avoid cache-line ping-pong.
     uint64_t ____padding[7];

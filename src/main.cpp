@@ -47,6 +47,7 @@ int main(int argc, char** argv)
             ("pool_path", "Path to persistent pool", cxxopts::value<std::string>()->default_value(""))
             ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value("0"))
             ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value("false"))
+            ("latency_sampling", "Sample latency of requests", cxxopts::value<float>()->default_value("0"))
             ("help", "Print help")
         ;
 
@@ -77,6 +78,14 @@ int main(int argc, char** argv)
             opt.skip_load = false;
         }
 
+        if (result.count("latency_sampling"))
+        {
+            opt.latency_sampling = result["latency_sampling"].as<float>();
+        }
+        else
+        {
+            opt.latency_sampling = 0.0;
+        }
 
         if (result.count("input"))
         {
@@ -260,6 +269,12 @@ int main(int argc, char** argv)
     if(opt.key_distribution == distribution_t::ZIPFIAN && (opt.key_skew < 0.0 || opt.key_skew > 1.0))
     {
         std::cout << "Skew factor must be in the range [0.0 , 1.0]." << std::endl;
+        exit(1);
+    }
+
+    if((opt.latency_sampling < 0.0 || opt.latency_sampling > 1.0))
+    {
+        std::cout << "Latency sampling must be in the range [0.0 , 1.0]." << std::endl;
         exit(1);
     }
 
