@@ -148,8 +148,7 @@ void benchmark_t::run() noexcept
                     sw.start();
                 }
 
-                // TODO: add warning. We expect at least 50 op per thread
-                #pragma omp for schedule(nonmonotonic : dynamic, 50)
+                #pragma omp for schedule(static)
                 for (uint64_t i = 0; i < opt_.num_ops; ++i)
                 {
                     // Generate random operation
