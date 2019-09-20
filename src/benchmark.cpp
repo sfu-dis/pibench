@@ -164,9 +164,6 @@ void benchmark_t::run() noexcept
                     // Generate random scrambled key
                     auto key_ptr = key_generator_->next(op == operation_t::INSERT ? true : false);
 
-                    // Generate random value
-                    auto value_ptr = value_generator_.next();
-
                     auto measure_latency = random_bool();
                     if(measure_latency)
                     {
@@ -183,12 +180,16 @@ void benchmark_t::run() noexcept
 
                     case operation_t::INSERT:
                     {
+                        // Generate random value
+                        auto value_ptr = value_generator_.next();
                         auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
                         break;
                     }
 
                     case operation_t::UPDATE:
                     {
+                        // Generate random value
+                        auto value_ptr = value_generator_.next();
                         auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
                         break;
                     }
