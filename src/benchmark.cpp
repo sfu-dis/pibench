@@ -116,6 +116,7 @@ void benchmark_t::run() noexcept
 
     float elapsed = 0.0;
     stopwatch_t sw;
+    omp_set_nested(true);
     #pragma omp parallel sections num_threads(2)
     {
         #pragma omp section // Monitor thread
@@ -226,6 +227,7 @@ void benchmark_t::run() noexcept
             }
         }
     }
+    omp_set_nested(false);
 
     std::unique_ptr<SystemCounterState> after_sstate;
     if (opt_.enable_pcm)
