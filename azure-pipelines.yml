@@ -1,0 +1,17 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- script: docker build -t cpp_project .  # add options to this command to meet your needs
+  displayName: 'build the code'
+
+- script: docker run cpp_project
+  displayName: 'Run tests'
