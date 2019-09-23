@@ -5,6 +5,7 @@
 
 trigger:
 - master
+- azure-ci
 
 pool:
   vmImage: 'ubuntu-latest'
