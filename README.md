@@ -1,4 +1,4 @@
-# PiBench
+# PiBench [![Build Status](https://dev.azure.com/pibench/pibench-pipelines/_apis/build/status/wangtzh.pibench?branchName=master)](https://dev.azure.com/pibench/pibench-pipelines/_build/latest?definitionId=1&branchName=master)
 Framework for benchmarking persistent indexes.
 
 # Building
