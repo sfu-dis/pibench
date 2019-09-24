@@ -11,6 +11,9 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
+- checkout: self
+  submodules: true
+
 - script: docker build -t pibench .  # add options to this command to meet your needs
   displayName: 'Build the code'
 
