@@ -11,8 +11,8 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-- script: docker build -t cpp_project .  # add options to this command to meet your needs
-  displayName: 'build the code'
+- script: docker build -t pibench .  # add options to this command to meet your needs
+  displayName: 'Build the code'
 
-- script: docker run cpp_project
+- script: docker run pibench
   displayName: 'Run tests'
