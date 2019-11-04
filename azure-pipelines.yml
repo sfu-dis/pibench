@@ -3,19 +3,91 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+# Trigger on push to master branch
 trigger:
 - master
 - azure-ci
 
-pool:
-  vmImage: 'ubuntu-latest'
+# Trigger on pull request to master branch
+pr:
+- master
 
-steps:
-- checkout: self
-  submodules: true
+jobs:
+- job:
+  displayName: Ubuntu-16.04
+  pool:
+    vmImage: 'ubuntu-16.04'
+  strategy:
+    matrix:  
+      GCC-7 Debug:
+        CC: gcc-7
+        CXX: g++-7
+        Packages: g++-7
+        BuildType: Debug
 
-- script: docker build -t pibench .  # add options to this command to meet your needs
-  displayName: 'Build the code'
+      GCC-7 Release:
+        CC: gcc-7
+        CXX: g++-7
+        Packages: g++-7
+        BuildType: Release
 
-- script: docker run pibench
-  displayName: 'Run tests'
+      GCC-8 Debug:
+        CC: gcc-8
+        CXX: g++-8
+        Packages: g++-8
+        BuildType: Debug
+
+      GCC-8 Release:
+        CC: gcc-8
+        CXX: g++-8
+        Packages: g++-8
+        BuildType: Release
+        
+      GCC-9 Debug:
+        CC: gcc-9
+        CXX: g++-9
+        Packages: g++-9
+        BuildType: Debug
+
+      GCC-9 Release:
+        CC: gcc-9
+        CXX: g++-9
+        Packages: g++-9
+        BuildType: Release
+
+      Clang-6.0 Debug:
+        CC: clang-6.0
+        CXX: clang++-6.0
+        Packages: clang-6.0 libomp-dev
+        BuildType: Debug
+
+      Clang-6.0 Release:
+        CC: clang-6.0
+        CXX: clang++-6.0
+        Packages: clang-6.0 libomp-dev
+        BuildType: Release
+
+  steps:
+  - checkout: self
+    submodules: true
+  
+  - script: |
+      sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+      sudo apt-get update
+      sudo apt-get install -y $(Packages)
+      sudo update-alternatives --install /usr/bin/cc cc /usr/bin/$(CC) 100
+      sudo update-alternatives --set cc /usr/bin/$(CC)
+      sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/$(CXX) 100
+      sudo update-alternatives --set c++ /usr/bin/$(CXX)
+    displayName: 'Install Build Dependencies'
+  - task: CMake@1
+    displayName: 'CMake .. -DCMAKE_BUILD_TYPE=$(BuildType)'
+    inputs:
+      workingDirectory: 'build'
+      cmakeArgs: '.. -DCMAKE_BUILD_TYPE=$(BuildType)'
+
+  - script: make -j -C build
+    displayName: 'Compiling'
+    
+  - script: make test -C build
+    displayName: 'Running tests'
