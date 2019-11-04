@@ -19,18 +19,6 @@ jobs:
     vmImage: 'ubuntu-16.04'
   strategy:
     matrix:  
-      GCC-7 Debug:
-        CC: gcc-7
-        CXX: g++-7
-        Packages: g++-7
-        BuildType: Debug
-
-      GCC-7 Release:
-        CC: gcc-7
-        CXX: g++-7
-        Packages: g++-7
-        BuildType: Release
-
       GCC-8 Debug:
         CC: gcc-8
         CXX: g++-8
