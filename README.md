@@ -5,45 +5,45 @@ Framework for benchmarking persistent indexes.
 The project comprises an executable binary that dynamically links to a shared library implementing a persistent data structure.
 
 ## Dependencies
-The project requires c++17 and was tested with gcc 8.1.0 and CMake 3.13.1.
+The project requires C++17 and was tested with gcc 8.1.0 and CMake 3.13.1.
 
 ## CMake
 CMake supports out-of-source builds, which means that binaries are generated in a different directory than the source files. This not only maintains a clean source directory, but also allows multiple coexisting builds with different configurations.
 
 The typical approach is to create a `build` folder inside the project root folder after cloning it with git:
-```
-git clone --recursive https://github.com/wangtzh/pibench.git
-cd pibench
-mkdir build
+```bash
+$ git clone --recursive https://github.com/wangtzh/pibench.git
+$ cd pibench
+$ mkdir build
 ```
 
 The `--recursive` option indicates that submodules should also be cloned. To generate the build files, type:
-```
-cd build
-cmake ..
+```bash
+$ cd build
+$ cmake ..
 ```
 
 A specific compiler can be specified with:
-```
-CC=<path_to_bin> CXX=<path_to_bin> cmake ..
+```bash
+$ CC=<path_to_bin> CXX=<path_to_bin> cmake ..
 ```
 
 Alternatively, a debug version without optimizations is also supported:
-```
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+```bash
+$ cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
 
 Finally, to compile:
-```
-make
+```bash
+$ make
 ```
 # Intel PCM
 The tool relies on Processor Counters to collect hardware metrics.
 It needs access to model-specific registers (MSRs) that need set up by loading
 the `msr` kernel module. On Arch Linux, this is part of the `msr-tools` package
 which can be installed through pacman. Then, load the module:
-```
-modprobe msr
+```bash
+$ modprobe msr
 ```
 It may happen that the following message is displayed during runtime:
 ```
@@ -66,7 +66,7 @@ For example:
 
 `$ OMP_PLACES=cores OMP_PROC_BIND=true OMP_NESTED=true ./PiBench [...]`
 
-Note for clang users: you may need to additionally install OpenMP runtime, on Arch Linux this can be done by installing the package `extra/openmp`.
+Note for Clang users: you may need to additionally install OpenMP runtime, on Arch Linux this can be done by installing the package `extra/openmp`.
 
 
 # Running
@@ -97,6 +97,8 @@ Usage:
       --pcm               Turn on Intel PCM (default: true)
       --pool_path arg     Path to persistent pool (default: )
       --pool_size arg     Size of persistent pool (in Bytes) (default: 0)
+      --skip_load             Skip the load phase
+      --latency_sampling arg  Sample latency of requests (default: 0)
       --help              Print help
 ```
 The tree data structure implemented as a shared library must follow the API defined in [`tree_api.hpp`](include/tree_api.hpp).
@@ -107,11 +109,17 @@ You probably want to redirect the output to a file to be later passed as an inpu
 Also, PCM prints status messages to `stderr` and you probably want to discard them in the resulting file (`2>/dev/null`).
 The output looks like this:
 ```
+Environment:
+        Time: Tue Nov  5 14:05:25 2019
+        CPU: 96 * Intel(R) Xeon(R) Platinum 8260L CPU @ 2.40GHz
+        CPU Cache: 36608 KB
+        Kernel: Linux 5.3.4-3-default
 Benchmark Options:
         # Records: 10000000
         # Operations: 1000000
         # Threads: 1
         Sampling: 100 ms
+        Latency: 0.1
         Key prefix:
         Key size: 4
         Value size: 8
@@ -139,5 +147,37 @@ Samples:
         205066
         241721
         144168
+Latencies (99935 operations observed):
+        min: 395
+        50%: 1949
+        90%: 2405
+        99%: 11248
+        99.9%: 14224
+        99.99%: 23216
+        99.999%: 59100
+        max: 385366
 ```
+# Tail Latency
+PiBench can collect the latency of percentage of the total amount of request with the option `--latency_sampling=[0.0, 1.0]`.
+This is the probability of the time of individual requests being measured.
+A higher probability will result in more precise latency measurements, but also higher overhead.
+The user is encouraged to try different percentages and compare latency and throughput numbers.
+At the end of the execution the percentiles of the collected measurements is printed in nanoseconds (as seen above).
 
+# Skipping Load Phase
+The load phase is executed single-threaded to guarantee a deterministic end result of the data structure.
+If the load phase takes too long, it might be helpful to preload the data structure and simply run the benchmark on a fresh working copy of the memory pool by skipping the load phase.
+For example, this can be achieved with something like:
+```bash
+# Preload the tree pool
+$ ./PiBench fptree.so -n 1000 -p 0 -r 1 --pool_path=/mnt/pmem1/pool --pool_size=4294967296
+
+# Create working copy
+cp /mnt/pmem1/pool /mnt/pmem1/tmp_pool
+
+# Skip load and run benchmark on copy
+$ ./PiBench fptree.so -n 1000 -p 1000 -r 1 --skip_load=true --pool_path=/mnt/pmem1/tmp_pool --pool_size=4294967296
+
+# Remove working copy
+rm /mnt/pmem1/tmp_pool
+```
