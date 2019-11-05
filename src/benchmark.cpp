@@ -78,6 +78,7 @@ void benchmark_t::load() noexcept
         auto value_ptr = value_generator_.next();
 
         auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+        assert(r);
     }
     auto elapsed = sw.elapsed<std::chrono::milliseconds>();
 
@@ -174,7 +175,8 @@ void benchmark_t::run() noexcept
                     {
                     case operation_t::READ:
                     {
-                        tree_->find(key_ptr, key_generator_->size(), value_out);
+                        auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
+                        assert(r);
                         break;
                     }
 
@@ -183,6 +185,7 @@ void benchmark_t::run() noexcept
                         // Generate random value
                         auto value_ptr = value_generator_.next();
                         auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+                        assert(r);
                         break;
                     }
 
@@ -191,18 +194,21 @@ void benchmark_t::run() noexcept
                         // Generate random value
                         auto value_ptr = value_generator_.next();
                         auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+                        assert(r);
                         break;
                     }
 
                     case operation_t::REMOVE:
                     {
                         auto r = tree_->remove(key_ptr, key_generator_->size());
+                        assert(r);
                         break;
                     }
 
                     case operation_t::SCAN:
                     {
                         auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
+                        assert(r);
                         break;
                     }
 
