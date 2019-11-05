@@ -9,6 +9,8 @@
 #include <map>
 #include <cstring>
 #include <array>
+#include <mutex>
+#include <shared_mutex>
 
 template<typename Key, typename T>
 class stlmap_wrapper : public tree_api
@@ -25,6 +27,7 @@ public:
 
 private:
     std::map<Key,T> map_;
+    std::shared_mutex mutex_;
 };
 
 template<typename Key, typename T>
@@ -40,6 +43,8 @@ stlmap_wrapper<Key,T>::~stlmap_wrapper()
 template<typename Key, typename T>
 bool stlmap_wrapper<Key,T>::find(const char* key, size_t key_sz, char* value_out)
 {
+    std::shared_lock lock(mutex_);
+
     if constexpr (std::is_arithmetic<Key>::value)
     {
         auto it = map_.find(*reinterpret_cast<Key*>(const_cast<char*>(key)));
@@ -69,6 +74,8 @@ bool stlmap_wrapper<Key,T>::find(const char* key, size_t key_sz, char* value_out
 template<typename Key, typename T>
 bool stlmap_wrapper<Key, T>::insert(const char* key, size_t key_sz, const char* value, size_t value_sz)
 {
+    std::unique_lock lock(mutex_);
+
     Key k;
     if constexpr (std::is_arithmetic<Key>::value)
         k = *reinterpret_cast<Key*>(const_cast<char*>(key));
@@ -88,6 +95,8 @@ bool stlmap_wrapper<Key, T>::insert(const char* key, size_t key_sz, const char* 
 template<typename Key, typename T>
 bool stlmap_wrapper<Key, T>::update(const char* key, size_t key_sz, const char* value, size_t value_sz)
 {
+    std::unique_lock lock(mutex_);
+
     typename std::map<Key,T>::iterator it;
     if constexpr (std::is_arithmetic<Key>::value)
         it = map_.find(*reinterpret_cast<Key*>(const_cast<char*>(key)));
@@ -110,6 +119,8 @@ bool stlmap_wrapper<Key, T>::update(const char* key, size_t key_sz, const char* 
 template<typename Key, typename T>
 bool stlmap_wrapper<Key,T>::remove(const char* key, size_t key_sz)
 {
+    std::unique_lock lock(mutex_);
+
     if constexpr (std::is_arithmetic<Key>::value)
         return map_.erase(*reinterpret_cast<Key*>(const_cast<char*>(key))) == 1;
     else
@@ -119,6 +130,8 @@ bool stlmap_wrapper<Key,T>::remove(const char* key, size_t key_sz)
 template<typename Key, typename T>
 int stlmap_wrapper<Key,T>::scan(const char* key, size_t key_sz, int scan_sz, char*& values_out)
 {
+    std::shared_lock lock(mutex_);
+
     constexpr size_t ONE_MB = 1ULL << 20;
     static thread_local std::array<char, ONE_MB> results;
 
