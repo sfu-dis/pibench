@@ -7,9 +7,74 @@
 #include <omp.h>
 #include <functional> // std::bind
 #include <cmath>      // std::ceil
+#include <ctime>
+#include <fstream>
+#include <regex>            // std::regex_replace
+#include <sys/utsname.h>    // uname
 
 namespace PiBench
 {
+
+void print_environment()
+{
+    std::time_t now = std::time(nullptr);
+    uint64_t num_cpus = 0;
+    std::string cpu_type;
+    std::string cache_size;
+
+    std::ifstream cpuinfo("/proc/cpuinfo", std::ifstream::in);
+
+    if(!cpuinfo.good())
+    {
+        num_cpus = 0;
+        cpu_type = "Could not open /proc/cpuinfo";
+        cache_size = "Could not open /proc/cpuinfo";
+    }
+    else
+    {
+        std::string line;
+        while(!getline(cpuinfo, line).eof())
+        {
+            auto sep_pos = line.find(':');
+            if(sep_pos == std::string::npos)
+            {
+                continue;
+            }
+            else
+            {
+                std::string key = std::regex_replace(std::string(line, 0, sep_pos), std::regex("\\t+$"), "");
+                std::string val = sep_pos == line.size()-1 ? "" : std::string(line, sep_pos+2, line.size());
+                if(key.compare("model name") == 0)
+                {
+                    ++num_cpus;
+                    cpu_type = val;
+                }
+                else if(key.compare("cache size") == 0)
+                {
+                    cache_size = val;
+                }
+            }
+        }
+    }
+    cpuinfo.close();
+
+    std::string kernel_version;
+    struct utsname uname_buf;
+    if(uname(&uname_buf) == -1)
+    {
+        kernel_version = "Unknown";
+    }
+    else
+    {
+        kernel_version = std::string(uname_buf.sysname) + " " + std::string(uname_buf.release);
+    }
+
+    std::cout << "Environment:" << "\n"
+              << "\tTime: " << std::asctime(std::localtime(&now))
+              << "\tCPU: " << num_cpus << " * " << cpu_type << "\n"
+              << "\tCPU Cache: " << cache_size << "\n"
+              << "\tKernel: " << kernel_version << std::endl;
+}
 
 benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
     : tree_(tree),

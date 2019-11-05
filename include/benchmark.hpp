@@ -16,6 +16,8 @@
 namespace PiBench
 {
 
+void print_environment();
+
 /**
  * @brief Supported random number distributions.
  *

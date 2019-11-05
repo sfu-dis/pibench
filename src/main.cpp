@@ -277,7 +277,8 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    // Print options
+    // Print env and options
+    print_environment();
     std::cout << opt << std::endl;
 
     tree_opt.key_size = opt.key_prefix.size() + opt.key_size;
