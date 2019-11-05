@@ -320,6 +320,7 @@ std::ostream& operator<<(std::ostream& os, const PiBench::options_t& opt)
        << "\t# Operations: " << opt.num_ops << "\n"
        << "\t# Threads: " << opt.num_threads << "\n"
        << "\tSampling: " << opt.sampling_ms << " ms\n"
+       << "\tLatency: " << opt.latency_sampling << "\n"
        << "\tKey prefix: " << opt.key_prefix << "\n"
        << "\tKey size: " << opt.key_size << "\n"
        << "\tValue size: " << opt.value_size << "\n"
