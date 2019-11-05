@@ -33,6 +33,9 @@ enum class distribution_t : uint8_t
  */
 struct options_t
 {
+    /// Name of tree library file used to run the benchmark against.
+    std::string library_file = "";
+
     /// Number of records to insert into tree during 'load' phase.
     uint64_t num_records;
 
