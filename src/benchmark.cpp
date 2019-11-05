@@ -316,6 +316,7 @@ std::ostream& operator<<(std::ostream& os, const PiBench::options_t& opt)
 {
     os << "Benchmark Options:"
        << "\n"
+       << "\tTarget: " << opt.library_file << "\n"
        << "\t# Records: " << opt.num_records << "\n"
        << "\t# Operations: " << opt.num_ops << "\n"
        << "\t# Threads: " << opt.num_threads << "\n"

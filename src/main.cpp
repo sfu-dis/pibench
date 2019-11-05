@@ -15,7 +15,6 @@ using namespace PiBench;
 int main(int argc, char** argv)
 {
     // Parse command line arguments
-    std::string library_file;
     options_t opt;
     tree_options_t tree_opt;
     try
@@ -89,7 +88,7 @@ int main(int argc, char** argv)
 
         if (result.count("input"))
         {
-            library_file = result["input"].as<std::string>();
+            opt.library_file = result["input"].as<std::string>();
         }
         else
         {
@@ -285,7 +284,7 @@ int main(int argc, char** argv)
     tree_opt.value_size = opt.value_size;
     tree_opt.num_threads = opt.num_threads;
 
-    library_loader_t lib(library_file);
+    library_loader_t lib(opt.library_file);
     tree_api* tree = lib.create_tree(tree_opt);
     if(tree == nullptr)
     {
