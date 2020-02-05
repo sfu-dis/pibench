@@ -1,5 +1,11 @@
-# PiBench [![Build Status](https://dev.azure.com/pibench/pibench-pipelines/_apis/build/status/wangtzh.pibench?branchName=master)](https://dev.azure.com/pibench/pibench-pipelines/_build/latest?definitionId=1&branchName=master)
-Framework for benchmarking persistent indexes.
+<p align="center"> <img src="https://user-images.githubusercontent.com/7251387/73837645-2d9b8700-4812-11ea-8b5e-7cee08a52aac.png"></p>
+
+[![Build Status](https://dev.azure.com/pibench/pibench-pipelines/_apis/build/status/wangtzh.pibench?branchName=master)](https://dev.azure.com/pibench/pibench-pipelines/_build/latest?definitionId=1&branchName=master)
+
+# What is PiBench?
+PiBench ia a **p**ersistent **i**ndex **bench**mark tool targeted at data structures running on top of Intel Optane DC Persistent Memory.
+The goal is to provide an unified benchmark framework to facilitate comparison across different results and data structures.
+While PiBench can be used to benchmark regular DRAM data structures (such as C++ STL containers), it also gathers additional metrics specific to Intel Optane DC Persistent Memory.
 
 # Building
 The project comprises an executable binary that dynamically links to a shared library implementing a persistent data structure.
@@ -38,7 +44,7 @@ Finally, to compile:
 $ make
 ```
 # Intel PCM
-The tool relies on Processor Counters to collect hardware metrics.
+PiBench relies on [Processor Counter Monitor](https://github.com/opcm/pcm) to collect hardware metrics.
 It needs access to model-specific registers (MSRs) that need set up by loading
 the `msr` kernel module. On Arch Linux, this is part of the `msr-tools` package
 which can be installed through pacman. Then, load the module:
