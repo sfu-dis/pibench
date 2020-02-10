@@ -3,7 +3,7 @@
  * SIGMOD 1994
  *
  * The zipfian_int_distribution class is intended to be compatible with other
- * distributions defined in #include<random> by the C++11 standard.
+ * distributions introduced in #include <random> by the C++11 standard.
  *
  * Usage example:
  * #include <random>
@@ -11,7 +11,7 @@
  * int main()
  * {
  *   std::default_random_engine generator;
- *   std::zipfian_int_distribution<int> distribution(1,10,0.99);
+ *   zipfian_int_distribution<int> distribution(1, 10, 0.99);
  *   int i = distribution(generator);
  * }
  */
@@ -20,7 +20,7 @@
  * IMPORTANT: constructing the distribution object requires calculating the zeta
  * value which becomes prohibetively expensive for very large ranges. As an
  * alternative for such cases, the user can pass the pre-calculated values and
- * avoid the calculation.
+ * avoid the calculation every time.
  *
  * Usage example:
  * #include <random>
@@ -28,8 +28,8 @@
  * int main()
  * {
  *   std::default_random_engine generator;
- *   std::zipfian_int_distribution<int>::param_type p(1,1e6, 0.99, 27.000);
- *   std::zipfian_int_distribution<int> distribution(p);
+ *   zipfian_int_distribution<int>::param_type p(1, 1e6, 0.99, 27.000);
+ *   zipfian_int_distribution<int> distribution(p);
  *   int i = distribution(generator);
  * }
  */
@@ -42,7 +42,7 @@
 template <typename _IntType = int>
 class zipfian_int_distribution
 {
-    static_assert(std::is_integral<_IntType>::value, "template argument not an integral type");
+    static_assert(std::is_integral<_IntType>::value, "Template argument not an integral type.");
 
 public:
     /** The type of the range of the distribution. */
