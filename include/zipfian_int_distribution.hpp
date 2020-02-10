@@ -92,11 +92,17 @@ public:
         double _M_zeta;
         double _M_zeta2theta;
 
-        double zeta(double n, double theta)
+        /**
+         * @brief Calculates zeta.
+         *
+         * @param __n [IN]  The size of the domain.
+         * @param __theta [IN]  The skew factor of the distribution.
+         */
+        double zeta(unsigned long __n, double __theta)
         {
             double ans = 0.0;
-            for (int i = 1; i <= n; ++i)
-                ans += std::pow(1.0 / i, theta);
+            for (unsigned long i=1; i<=__n; ++i)
+                ans += std::pow(1.0 / i, __theta);
             return ans;
         }
     };
