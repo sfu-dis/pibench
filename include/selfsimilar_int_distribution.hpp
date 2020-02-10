@@ -38,7 +38,7 @@ public:
     {
         typedef selfsimilar_int_distribution<_IntType> distribution_type;
 
-        explicit param_type(_IntType __a = 0, _IntType __b = std::numeric_limits<_IntType>::max(), double __skew = 0.99)
+        explicit param_type(_IntType __a = 0, _IntType __b = std::numeric_limits<_IntType>::max(), double __skew = 0.2)
             : _M_a(__a), _M_b(__b), _M_skew(__skew)
         {
             assert(_M_a <= _M_b && _M_skew > 0.0 && _M_skew < 1.0);
