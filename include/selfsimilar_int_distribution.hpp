@@ -63,12 +63,12 @@ public:
 
 public:
     /**
-   * @brief Constructs a selfsimilar_int_distribution object.
-   *
-   * @param __a [IN]  The lower bound of the distribution.
-   * @param __b [IN]  The upper bound of the distribution.
-   * @param __skew [IN]  The skew factor of the distribution.
-   */
+     * @brief Constructs a selfsimilar_int_distribution object.
+     *
+     * @param __a [IN]  The lower bound of the distribution.
+     * @param __b [IN]  The upper bound of the distribution.
+     * @param __skew [IN]  The skew factor of the distribution.
+     */
     explicit selfsimilar_int_distribution(_IntType __a = _IntType(0), _IntType __b = _IntType(1), double __skew = 0.2)
         : _M_param(__a, __b, __skew)
     {
@@ -79,10 +79,10 @@ public:
     }
 
     /**
-   * @brief Resets the distribution state.
-   *
-   * Does nothing for the selfsimilar int distribution.
-   */
+     * @brief Resets the distribution state.
+     *
+     * Does nothing for the selfsimilar int distribution.
+     */
     void reset() {}
 
     result_type a() const { return _M_param.a(); }
@@ -92,29 +92,29 @@ public:
     double skew() const { return _M_param.skew(); }
 
     /**
-   * @brief Returns the parameter set of the distribution.
-   */
+     * @brief Returns the parameter set of the distribution.
+     */
     param_type param() const { return _M_param; }
 
     /**
-   * @brief Sets the parameter set of the distribution.
-   * @param __param The new parameter set of the distribution.
-   */
+     * @brief Sets the parameter set of the distribution.
+     * @param __param The new parameter set of the distribution.
+     */
     void param(const param_type& __param) { _M_param = __param; }
 
     /**
-   * @brief Returns the inclusive lower bound of the distribution range.
-   */
+     * @brief Returns the inclusive lower bound of the distribution range.
+     */
     result_type min() const { return this->a(); }
 
     /**
-   * @brief Returns the inclusive upper bound of the distribution range.
-   */
+     * @brief Returns the inclusive upper bound of the distribution range.
+     */
     result_type max() const { return this->b(); }
 
     /**
-   * @brief Generating functions.
-   */
+     * @brief Generating functions.
+     */
     template <typename _UniformRandomNumberGenerator>
     result_type operator()(_UniformRandomNumberGenerator& __urng)
     {
@@ -129,10 +129,10 @@ public:
                           std::pow(u, std::log(__p.skew()) / std::log(1.0 - __p.skew())));
     }
 
-    /**
-   * @brief Return true if two selfsimilar int distributions have
-   *        the same parameters.
-   */
+   /**
+    * @brief Return true if two selfsimilar int distributions have
+    *        the same parameters.
+    */
     friend bool operator==(const selfsimilar_int_distribution& __d1, const selfsimilar_int_distribution& __d2)
     {
         return __d1._M_param == __d2._M_param;
