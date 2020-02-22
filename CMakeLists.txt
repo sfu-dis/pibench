@@ -46,6 +46,9 @@ if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()
 
+# Leveldb library
+add_subdirectory(wrappers/leveldb)
+
 # Example libraries
 add_library(dummy_wrapper SHARED wrappers/dummy/dummy_wrapper.cpp)
 add_library(stlmap_wrapper SHARED wrappers/stlmap/stlmap_wrapper.cpp)
