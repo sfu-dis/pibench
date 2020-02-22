@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(PIBENCH_BUILD_LEVELDB "Build LevelDB wrapper" OFF)
+
 include(CTest)
 
 find_package(OpenMP REQUIRED)
@@ -45,6 +47,10 @@ if(BUILD_TESTING)
     add_subdirectory(googletest)
     add_subdirectory(tests)
 endif()
+
+if(PIBENCH_BUILD_LEVELDB)
+  add_subdirectory(wrappers/leveldb)
+endif(PIBENCH_BUILD_LEVELDB)
 
 # Example libraries
 add_library(dummy_wrapper SHARED wrappers/dummy/dummy_wrapper.cpp)
