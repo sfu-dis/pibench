@@ -7,7 +7,18 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CTest)
 
-find_package(OpenMP REQUIRED)
+#find_package(OpenMP REQUIRED)
+find_library(OpenMP_LIBRARY
+    NAMES omp
+)
+find_path(OpenMP_INCLUDE_DIR
+    omp.h
+)
+mark_as_advanced(OpenMP_LIBRARY OpenMP_INCLUDE_DIR)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(OpenMP DEFAULT_MSG 
+    OpenMP_LIBRARY OpenMP_INCLUDE_DIR)
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
   set(OpenMP_C "${CMAKE_C_COMPILER}")
