@@ -21,9 +21,17 @@ link_directories(${LEVELDB_LIB_PATH})
 message("LevelDB source: ${LEVELDB_SRC_PATH}")
 message("LevelDB library: ${LEVELDB_LIB_PATH}")
 
+include(CheckLibraryExists)
+check_library_exists(snappy snappy_compress "" HAVE_SNAPPY)
+
 add_library(leveldb_wrapper SHARED leveldb_wrapper.cpp)
 set(LEVELDB_LINK_FLAGS "-lleveldb -lpthread -lsnappy -lnuma")
 target_link_libraries(leveldb_wrapper "${LEVELDB_LINK_FLAGS}")
+
+if(HAVE_SNAPPY)
+  target_link_libraries(leveldb_wrapper snappy)
+endif(HAVE_SNAPPY)
+
 add_dependencies(leveldb_wrapper leveldb)
 
 # =============================================================== #
