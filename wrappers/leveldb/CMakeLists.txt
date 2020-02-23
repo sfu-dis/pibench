@@ -25,7 +25,7 @@ include(CheckLibraryExists)
 check_library_exists(snappy snappy_compress "" HAVE_SNAPPY)
 
 add_library(leveldb_wrapper SHARED leveldb_wrapper.cpp)
-set(LEVELDB_LINK_FLAGS "-lleveldb -lpthread -lsnappy -lnuma")
+set(LEVELDB_LINK_FLAGS "-lleveldb -lpthread")
 target_link_libraries(leveldb_wrapper "${LEVELDB_LINK_FLAGS}")
 
 if(HAVE_SNAPPY)
