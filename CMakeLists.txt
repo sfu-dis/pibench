@@ -7,8 +7,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CTest)
 
-find_package(OpenMP REQUIRED)
-
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
   set(OpenMP_C "${CMAKE_C_COMPILER}")
   set(OpenMP_C_FLAGS "-fopenmp=libomp")
@@ -25,6 +23,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(OpenMP_libgomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
   set(OpenMP_libiomp5_LIBRARY ${OpenMP_CXX_LIB_NAMES})
 endif()
+
+find_package(OpenMP REQUIRED)
 
 ######################## Intel PCM ########################
 add_custom_command(OUTPUT libPCM.a
