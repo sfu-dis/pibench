@@ -3,7 +3,7 @@
 [![Build Status](https://dev.azure.com/pibench/pibench-pipelines/_apis/build/status/wangtzh.pibench?branchName=master)](https://dev.azure.com/pibench/pibench-pipelines/_build/latest?definitionId=1&branchName=master)
 
 # What is PiBench?
-PiBench ia a **p**ersistent **i**ndex **bench**mark tool targeted at data structures running on top of Intel Optane DC Persistent Memory.
+PiBench is a **p**ersistent **i**ndex **bench**mark tool targeted at data structures running on top of Intel Optane DC Persistent Memory.
 The goal is to provide an unified benchmark framework to facilitate comparison across different results and data structures.
 While PiBench can be used to benchmark regular DRAM data structures (such as C++ STL containers), it also gathers additional metrics specific to Intel Optane DC Persistent Memory.
 
