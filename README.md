@@ -7,6 +7,14 @@ PiBench is a **p**ersistent **i**ndex **bench**mark tool targeted at data struct
 The goal is to provide an unified benchmark framework to facilitate comparison across different results and data structures.
 While PiBench can be used to benchmark regular DRAM data structures (such as C++ STL containers), it also gathers additional metrics specific to Intel Optane DC Persistent Memory.
 
+Find out more about PiBench and results in our [VLDB paper](http://www.vldb.org/pvldb/vol13/p574-lersch.pdf) below. If you are using PiBench for your work, please cite:
+
+````
+Evaluating Persistent Memory Range Indexes
+Lucas Lersch, Xiangpeng  Hao, Ismail Oukid, Tianzheng  Wang, Thomas  Willhalm
+VLDB 2020 / PVLDB Vol. 13, No. 4.
+````
+
 # Building
 The project comprises an executable binary that dynamically links to a shared library implementing a persistent data structure.
 
