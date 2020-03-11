@@ -10,9 +10,8 @@ While PiBench can be used to benchmark regular DRAM data structures (such as C++
 Find out more about PiBench and results in our [VLDB paper](http://www.vldb.org/pvldb/vol13/p574-lersch.pdf) below. If you are using PiBench for your work, please cite:
 
 ````
-Evaluating Persistent Memory Range Indexes
-Lucas Lersch, Xiangpeng  Hao, Ismail Oukid, Tianzheng  Wang, Thomas  Willhalm
-VLDB 2020 / PVLDB Vol. 13, No. 4.
+Lucas Lersch, Xiangpeng Hao, Ismail Oukid, Tianzheng Wang, Thomas Willhalm:
+Evaluating Persistent Memory Range Indexes. PVLDB 13(4): 574-587 (2019)
 ````
 
 # Building
