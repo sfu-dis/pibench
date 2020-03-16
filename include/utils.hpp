@@ -98,7 +98,7 @@ namespace utils
     {
         static_assert(
             std::is_same<T, uint32_t>::value || std::is_same<T, uint64_t>::value,
-            "fnv1a only supports 32 bits and 64 bits variants."
+            "multiplicative hash only supports 32 bits and 64 bits variants."
         );
 
         static constexpr T A = std::is_same<T, uint32_t>::value ?
