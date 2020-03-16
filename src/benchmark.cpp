@@ -134,7 +134,7 @@ void benchmark_t::load() noexcept
 
     stopwatch_t sw;
     sw.start();
-    for (uint32_t i = 0; i < opt_.num_records; ++i)
+    for (uint64_t i = 0; i < opt_.num_records; ++i)
     {
         // Generate key in sequence
         auto key_ptr = key_generator_->next(true);
