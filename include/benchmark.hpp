@@ -24,9 +24,9 @@ void print_environment();
  */
 enum class distribution_t : uint8_t
 {
-    UNIFORM,
-    SELFSIMILAR,
-    ZIPFIAN
+    UNIFORM = 0,
+    SELFSIMILAR = 1,
+    ZIPFIAN = 2
 };
 
 /**
@@ -39,61 +39,61 @@ struct options_t
     std::string library_file = "";
 
     /// Number of records to insert into tree during 'load' phase.
-    uint64_t num_records;
+    uint64_t num_records = 1e6;
 
     /// Number of operations to issue during 'run' phase.
-    uint64_t num_ops;
+    uint64_t num_ops = 1e6;
 
     /// Number of parallel threads used for executing requests.
-    uint32_t num_threads;
+    uint32_t num_threads = 1;
 
     /// Sampling window in milliseconds.
-    uint32_t sampling_ms;
+    uint32_t sampling_ms = 1000;
 
     /// Key prefix.
     std::string key_prefix = "";
 
     /// Size of key in bytes.
-    uint32_t key_size;
+    uint32_t key_size = 8;
 
     /// Size of value in bytes.
-    uint32_t value_size;
+    uint32_t value_size = 8;
 
     /// Ratio of read operations.
-    float read_ratio;
+    float read_ratio = 1.0;
 
     /// Ratio of insert operations.
-    float insert_ratio;
+    float insert_ratio = 0.0;
 
     /// Ratio of update operations.
-    float update_ratio;
+    float update_ratio = 0.0;
 
     /// Ratio of remove operations.
-    float remove_ratio;
+    float remove_ratio = 0.0;
 
     /// Ratio of scan operations.
-    float scan_ratio;
+    float scan_ratio = 0.0;
 
     /// Size of scan operations in records.
-    uint32_t scan_size;
+    uint32_t scan_size = 100;
 
     /// Distribution used for generation random keys.
-    distribution_t key_distribution;
+    distribution_t key_distribution = distribution_t::UNIFORM;
 
     /// Factor to be used for skewed random key distributions.
-    float key_skew;
+    float key_skew = 0.2;
 
     /// Master seed to be used for random generations.
-    uint32_t rnd_seed;
+    uint32_t rnd_seed = 1729;
 
     /// Whether to enable Intel PCM for profiling.
-    bool enable_pcm;
+    bool enable_pcm = true;
 
     /// Whether to skip the load phase.
-    bool skip_load;
+    bool skip_load = false;
 
     /// Ratio of requests to sample latency from (between 0.0 and 1.0).
-    float latency_sampling;
+    float latency_sampling = 0.0;
 };
 
 /**
