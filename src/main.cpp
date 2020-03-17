@@ -26,27 +26,27 @@ int main(int argc, char** argv)
 
         options.add_options()
             ("input", "Absolute path to library file", cxxopts::value<std::string>())
-            ("n,records", "Number of records to load", cxxopts::value<uint64_t>()->default_value("1000000"))
-            ("p,operations", "Number of operations to execute", cxxopts::value<uint64_t>()->default_value("1000000"))
-            ("t,threads", "Number of threads to use", cxxopts::value<uint32_t>()->default_value("1"))
-            ("f,key_prefix", "Prefix string prepended to every key", cxxopts::value<std::string>()->default_value(""))
-            ("k,key_size", "Size of keys in Bytes (without prefix)", cxxopts::value<uint32_t>()->default_value("4"))
-            ("v,value_size", "Size of values in Bytes", cxxopts::value<uint32_t>()->default_value("4"))
-            ("r,read_ratio", "Ratio of read operations", cxxopts::value<float>()->default_value("1"))
-            ("i,insert_ratio", "Ratio of insert operations", cxxopts::value<float>()->default_value("0"))
-            ("u,update_ratio", "Ratio of update operations", cxxopts::value<float>()->default_value("0"))
-            ("d,remove_ratio", "Ratio of remove operations", cxxopts::value<float>()->default_value("0"))
-            ("s,scan_ratio", "Ratio of scan operations", cxxopts::value<float>()->default_value("0"))
-            ("scan_size", "Number of records to be scanned.", cxxopts::value<uint32_t>()->default_value("100"))
-            ("sampling_ms", "Sampling window in milliseconds", cxxopts::value<uint32_t>()->default_value("1000"))
+            ("n,records", "Number of records to load", cxxopts::value<uint64_t>()->default_value(std::to_string(opt.num_records)))
+            ("p,operations", "Number of operations to execute", cxxopts::value<uint64_t>()->default_value(std::to_string(opt.num_ops)))
+            ("t,threads", "Number of threads to use", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.num_threads)))
+            ("f,key_prefix", "Prefix string prepended to every key", cxxopts::value<std::string>()->default_value("\"" + opt.key_prefix + "\""))
+            ("k,key_size", "Size of keys in Bytes (without prefix)", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.key_size)))
+            ("v,value_size", "Size of values in Bytes", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.value_size)))
+            ("r,read_ratio", "Ratio of read operations", cxxopts::value<float>()->default_value(std::to_string(opt.read_ratio)))
+            ("i,insert_ratio", "Ratio of insert operations", cxxopts::value<float>()->default_value(std::to_string(opt.insert_ratio)))
+            ("u,update_ratio", "Ratio of update operations", cxxopts::value<float>()->default_value(std::to_string(opt.update_ratio)))
+            ("d,remove_ratio", "Ratio of remove operations", cxxopts::value<float>()->default_value(std::to_string(opt.remove_ratio)))
+            ("s,scan_ratio", "Ratio of scan operations", cxxopts::value<float>()->default_value(std::to_string(opt.scan_ratio)))
+            ("scan_size", "Number of records to be scanned.", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.scan_size)))
+            ("sampling_ms", "Sampling window in milliseconds", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.sampling_ms)))
             ("distribution", "Key distribution to use", cxxopts::value<std::string>()->default_value("UNIFORM"))
-            ("skew", "Key distribution skew factor to use", cxxopts::value<float>()->default_value("0.2"))
-            ("seed", "Seed for random generators", cxxopts::value<uint32_t>()->default_value("1729"))
-            ("pcm", "Turn on Intel PCM", cxxopts::value<bool>()->default_value("true"))
-            ("pool_path", "Path to persistent pool", cxxopts::value<std::string>()->default_value(""))
-            ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value("0"))
-            ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value("false"))
-            ("latency_sampling", "Sample latency of requests", cxxopts::value<float>()->default_value("0"))
+            ("skew", "Key distribution skew factor to use", cxxopts::value<float>()->default_value(std::to_string(opt.key_skew)))
+            ("seed", "Seed for random generators", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.rnd_seed)))
+            ("pcm", "Turn on Intel PCM", cxxopts::value<bool>()->default_value((opt.enable_pcm ? "true" : "false")))
+            ("pool_path", "Path to persistent pool", cxxopts::value<std::string>()->default_value("\"" + tree_opt.pool_path + "\""))
+            ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value(std::to_string(tree_opt.pool_size)))
+            ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value((opt.skip_load ? "true" : "false")))
+            ("latency_sampling", "Sample latency of requests", cxxopts::value<float>()->default_value(std::to_string(opt.latency_sampling)))
             ("help", "Print help")
         ;
 
@@ -63,27 +63,15 @@ int main(int argc, char** argv)
         {
             opt.enable_pcm = result["pcm"].as<bool>();
         }
-        else
-        {
-            opt.enable_pcm = true;
-        }
 
         if (result.count("skip_load"))
         {
             opt.skip_load = result["skip_load"].as<bool>();
         }
-        else
-        {
-            opt.skip_load = false;
-        }
 
         if (result.count("latency_sampling"))
         {
             opt.latency_sampling = result["latency_sampling"].as<float>();
-        }
-        else
-        {
-            opt.latency_sampling = 0.0;
         }
 
         if (result.count("input"))
@@ -100,76 +88,50 @@ int main(int argc, char** argv)
         // Parse "num_records"
         if (result.count("records"))
             opt.num_records = result["records"].as<uint64_t>();
-        else
-            opt.num_records = 1e6;
 
         // Parse "num_operations"
         if (result.count("operations"))
             opt.num_ops = result["operations"].as<uint64_t>();
-        else
-            opt.num_ops = 1e6;
 
         // Parse "num_threads"
         if (result.count("threads"))
             opt.num_threads = result["threads"].as<uint32_t>();
-        else
-            opt.num_threads = 1;
 
         // Parse "sampling_ms"
         if (result.count("sampling_ms"))
             opt.sampling_ms = result["sampling_ms"].as<uint32_t>();
-        else
-            opt.sampling_ms = 1000;
 
         // Parse "key_prefix"
         if (result.count("key_prefix"))
             opt.key_prefix = result["key_prefix"].as<std::string>();
-        else
-            opt.key_prefix = "";
 
         // Parse "key_size"
         if (result.count("key_size"))
             opt.key_size = result["key_size"].as<uint32_t>();
-        else
-            opt.key_size = 4;
 
         // Parse "value_size"
         if (result.count("value_size"))
             opt.value_size = result["value_size"].as<uint32_t>();
-        else
-            opt.value_size = 4;
 
         // Parse "ops_ratio"
         if (result.count("read_ratio"))
             opt.read_ratio = result["read_ratio"].as<float>();
-        else
-            opt.read_ratio = 0;
 
         if (result.count("insert_ratio"))
             opt.insert_ratio = result["insert_ratio"].as<float>();
-        else
-            opt.insert_ratio = 0;
 
         if (result.count("update_ratio"))
             opt.update_ratio = result["update_ratio"].as<float>();
-        else
-            opt.update_ratio = 0;
 
         if (result.count("remove_ratio"))
             opt.remove_ratio = result["remove_ratio"].as<float>();
-        else
-            opt.remove_ratio = 0;
 
         if (result.count("scan_ratio"))
             opt.scan_ratio = result["scan_ratio"].as<float>();
-        else
-            opt.scan_ratio = 0;
 
         // Parse 'scan_size'.
         if (result.count("scan_size"))
             opt.scan_size = result["scan_size"].as<uint32_t>();
-        else
-            opt.scan_size = 100;
 
         // Parse 'key_distribution'
         if(result.count("distribution"))
@@ -194,34 +156,24 @@ int main(int argc, char** argv)
                 exit(1);
             }
         }
-        else
-            opt.key_distribution = distribution_t::UNIFORM;
 
         // Parse 'key_skew'
         if (result.count("skew"))
             opt.key_skew = result["skew"].as<float>();
-        else
-            opt.key_skew = 0.2;
 
         // Parse 'rnd_seed'
         if (result.count("seed"))
         {
             opt.rnd_seed = result["seed"].as<uint32_t>();
         }
-        else
-            opt.rnd_seed = 1729;
 
         // Parse "pool_path"
         if (result.count("pool_path"))
             tree_opt.pool_path = result["pool_path"].as<std::string>();
-        else
-            tree_opt.pool_path = "";
 
         // Parse "pool_size"
         if (result.count("pool_size"))
             tree_opt.pool_size = result["pool_size"].as<uint64_t>();
-        else
-            tree_opt.pool_size = 0;
 
     }
     catch (const cxxopts::OptionException& e)

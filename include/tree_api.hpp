@@ -20,11 +20,11 @@
 
 struct tree_options_t
 {
-    size_t key_size;
-    size_t value_size;
-    std::string pool_path;
-    size_t pool_size;
-    size_t num_threads;
+    size_t key_size = 8;
+    size_t value_size = 8;
+    std::string pool_path = "";
+    size_t pool_size = 0;
+    size_t num_threads = 1;
 };
 
 class tree_api;
