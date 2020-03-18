@@ -3,17 +3,18 @@
 
 #include <cstdint>
 #include <random>
+#include <array>
 
 namespace PiBench
 {
 
 enum class operation_t : uint8_t
 {
-    READ,
-    INSERT,
-    UPDATE,
-    REMOVE,
-    SCAN
+    READ = 0,
+    INSERT = 1,
+    UPDATE = 2,
+    REMOVE = 3,
+    SCAN = 4
 };
 
 class operation_generator_t
@@ -29,8 +30,13 @@ public:
      * @param scan ratio of scan operations.
      */
     operation_generator_t(float read, float insert, float update, float remove, float scan)
-        : dist_({read, insert, update, remove, scan})
     {
+        std::default_random_engine gen;
+        std::discrete_distribution<uint32_t> op_weights({read, insert, update, remove, scan});
+
+        for(unsigned int i=0; i<ops_.size(); ++i) {
+            ops_[i] = static_cast<operation_t>(op_weights(gen));
+        }
     }
 
     /**
@@ -40,7 +46,7 @@ public:
      */
     operation_t next()
     {
-        return static_cast<operation_t>(dist_(gen_));
+        return ops_[dist_(gen_) & 0xff];
     }
 
     /**
@@ -69,7 +75,9 @@ private:
     static thread_local std::default_random_engine gen_;
 
     /// Weighted distribution for generating random numbers.
-    std::discrete_distribution<uint32_t> dist_;
+    std::uniform_int_distribution<uint32_t> dist_;
+
+    std::array<operation_t, 256> ops_;
 };
 } // namespace PiBench
 
