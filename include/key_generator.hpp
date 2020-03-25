@@ -139,7 +139,7 @@ private:
 class selfsimilar_key_generator_t final : public key_generator_t
 {
 public:
-    selfsimilar_key_generator_t(size_t N, float skew, size_t size, const std::string& prefix = "")
+    selfsimilar_key_generator_t(size_t N, size_t size, const std::string& prefix = "", float skew = 0.2)
         : dist_(1, N, skew),
           key_generator_t(N, size, prefix)
     {
@@ -157,7 +157,7 @@ private:
 class zipfian_key_generator_t final : public key_generator_t
 {
 public:
-    zipfian_key_generator_t(size_t N, float skew, size_t size, const std::string& prefix = "")
+    zipfian_key_generator_t(size_t N, size_t size, const std::string& prefix = "", float skew = 0.99)
         : dist_(1, N, skew),
           key_generator_t(N, size, prefix)
     {
