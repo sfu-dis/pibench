@@ -1,6 +1,7 @@
 include(GoogleTest)
 
 add_executable(PiBenchTests
+    test_key_generator.cpp
     test_value_generator.cpp)
 
 target_link_libraries(PiBenchTests pibench gtest gtest_main)
