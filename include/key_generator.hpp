@@ -66,6 +66,13 @@ public:
     size_t size() const noexcept { return prefix_.size() + size_; }
 
     /**
+     * @brief Returns size of keyspace in number of elements..
+     *
+     * @return size_t
+     */
+    size_t keyspace() const noexcept { return N_; }
+
+    /**
      * @brief Set the seed object.
      *
      * @param seed
