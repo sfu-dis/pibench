@@ -7,7 +7,26 @@
 namespace
 {
 
-TEST(ValueGenerator, Simple)
+class ValueGeneratorTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        // Save default value of static members
+        seed_ = PiBench::value_generator_t::get_seed();
+    }
+
+    void TearDown() override
+    {
+        // Restore default value of static members
+        PiBench::value_generator_t::set_seed(seed_);
+    }
+
+private:
+    uint32_t seed_;
+};
+
+TEST_F(ValueGeneratorTest, Simple)
 {
     PiBench::value_generator_t gen(10);
     EXPECT_EQ(gen.size(), 10);
@@ -21,7 +40,7 @@ TEST(ValueGenerator, Simple)
     EXPECT_NE(memcmp(v1, v2, gen.size()), 0);
 }
 
-TEST(ValueGenerator, SimpleMultithread)
+TEST_F(ValueGeneratorTest, SimpleMultithread)
 {
     PiBench::value_generator_t gen(10);
     EXPECT_EQ(gen.size(), 10);
@@ -51,7 +70,7 @@ TEST(ValueGenerator, SimpleMultithread)
     EXPECT_EQ(gen.get_seed(), 1729);
 }
 
-TEST(ValueGenerator, ResetSeed)
+TEST_F(ValueGeneratorTest, ResetSeed)
 {
     PiBench::value_generator_t gen(10);
     gen.set_seed(1729);
