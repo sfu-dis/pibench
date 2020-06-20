@@ -13,6 +13,7 @@ Find out more about PiBench and results in our [VLDB paper](http://www.vldb.org/
 Lucas Lersch, Xiangpeng Hao, Ismail Oukid, Tianzheng Wang, Thomas Willhalm:
 Evaluating Persistent Memory Range Indexes. PVLDB 13(4): 574-587 (2019)
 ````
+Check out [**PiBench Online**](http://pibench.org) for an online demo of PiBench! Code is available [here](https://github.com/sfu-dis/pibench-online) to deploy your own.
 
 # Building
 The project comprises an executable binary that dynamically links to a shared library implementing a persistent data structure.
