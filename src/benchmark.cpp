@@ -155,16 +155,14 @@ void benchmark_t::load() noexcept
 void benchmark_t::run() noexcept
 {
     std::vector<stats_t> global_stats;
-    global_stats.resize(100000); // Avoid overhead of allocation and page fault
-    global_stats.resize(0);
+    global_stats.reserve(100000); // Avoid overhead of allocation and page fault
 
     static thread_local char value_out[value_generator_t::VALUE_MAX];
     char* values_out;
 
     std::vector<stats_t> local_stats(opt_.num_threads);
     for(auto& lc : local_stats) {
-        lc.times.resize(std::ceil(opt_.num_ops/opt_.num_threads)*2);
-        lc.times.resize(0);
+        lc.times.reserve(std::ceil(opt_.num_ops/opt_.num_threads)*2);
     }
 
     // Control variable of monitor thread
