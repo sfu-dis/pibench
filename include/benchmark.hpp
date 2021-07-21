@@ -94,6 +94,12 @@ struct options_t
 
     /// Ratio of requests to sample latency from (between 0.0 and 1.0).
     float latency_sampling = 0.0;
+
+    /// Benchmark time for time-based benchmark
+    float time = 0.0;
+
+    /// Mode(FALSE:time based or TRUE:operation based)
+    bool bm_mode = true;
 };
 
 /**

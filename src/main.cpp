@@ -47,6 +47,8 @@ int main(int argc, char** argv)
             ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value(std::to_string(tree_opt.pool_size)))
             ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value((opt.skip_load ? "true" : "false")))
             ("latency_sampling", "Sample latency of requests", cxxopts::value<float>()->default_value(std::to_string(opt.latency_sampling)))
+            ("m,mode","Benchmark mode",cxxopts::value<bool>()->default_value((opt.bm_mode ? "true":"false")))
+            ("time","Time PiBench run in time-based mode",cxxopts::value<float>()->default_value(std::to_string(opt.time)))
             ("help", "Print help")
         ;
 
@@ -175,6 +177,15 @@ int main(int argc, char** argv)
         if (result.count("pool_size"))
             tree_opt.pool_size = result["pool_size"].as<uint64_t>();
 
+        // Parse "mode"
+        if (result.count("mode"))
+            opt.bm_mode = result["mode"].as<bool>();
+
+        // Parse "time"
+        if (result.count("time"))
+            opt.time = result["time"].as<float>();
+
+
     }
     catch (const cxxopts::OptionException& e)
     {
@@ -183,11 +194,31 @@ int main(int argc, char** argv)
     }
 
     // Sanitize options
-    if(opt.key_prefix.size() + opt.key_size > key_generator_t::KEY_MAX)
+    if(opt.bm_mode)
     {
-        std::cout << "Total key size cannot be greater than " << key_generator_t::KEY_MAX
-            << ", but is " << opt.key_prefix.size() + opt.key_size << std::endl;
-        exit(1);
+        if(opt.key_prefix.size() + opt.key_size > key_generator_t::KEY_MAX)
+        {
+            std::cout << "Total key size cannot be greater than " << key_generator_t::KEY_MAX
+                      << ", but is " << opt.key_prefix.size() + opt.key_size << std::endl;
+            exit(1);
+        }
+    }
+    else
+    {
+        // 1 is for 256 threads
+        if(opt.key_prefix.size() + opt.key_size + 1 > key_generator_t::KEY_MAX)
+        {
+            std::cout << "Total key size cannot be greater than " << key_generator_t::KEY_MAX
+                      << ", but is " << opt.key_prefix.size() + opt.key_size +1 << std::endl;
+            exit(1);
+        }
+
+        // TODO: in time based mode, only support max of 256 threads
+        if(opt.num_threads > 256)
+        {
+            std::cout << "In time-based mode, thread number must be less than 256." <<std::endl;
+            exit(1);
+        }
     }
 
     if(opt.value_size > value_generator_t::VALUE_MAX)
