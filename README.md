@@ -108,6 +108,8 @@ Usage:
       --distribution arg  Key distribution to use (default: UNIFORM)
       --skew arg          Key distribution skew factor to use (default: 0.2)
       --seed arg          Seed for random generators (default: 1729)
+      --mode arg(T/F)     Time based or Operation based mode (default:operation based)
+      --time arg          Benchmark run time under time based mode
       --pcm               Turn on Intel PCM (default: true)
       --pool_path arg     Path to persistent pool (default: )
       --pool_size arg     Size of persistent pool (in Bytes) (default: 0)
