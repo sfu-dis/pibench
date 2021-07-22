@@ -11,6 +11,7 @@
 #include <fstream>
 #include <regex>            // std::regex_replace
 #include <sys/utsname.h>    // uname
+#include <atomic>
 
 namespace PiBench
 {
@@ -168,7 +169,7 @@ void benchmark_t::run() noexcept
     char* values_out;
 
     // Control variable of monitor thread
-    bool finished = false;
+    std::atomic<bool> finished(false);
 
     std::unique_ptr<SystemCounterState> before_sstate;
     if (opt_.enable_pcm)
@@ -207,7 +208,7 @@ void benchmark_t::run() noexcept
             #pragma omp section // Monitor thread
             {
                 std::chrono::milliseconds sampling_window(opt_.sampling_ms);
-                while (!finished)
+                while (!finished.load())
                 {
                     std::this_thread::sleep_for(sampling_window);
                     stats_t s;
@@ -314,7 +315,7 @@ void benchmark_t::run() noexcept
                     #pragma omp single nowait
                     {
                         elapsed = sw.elapsed<std::chrono::milliseconds>();
-                        finished = true;
+                        finished.store(true);
                     }
                 }
             }
@@ -328,16 +329,12 @@ void benchmark_t::run() noexcept
         global_stats.resize(static_cast<uint64_t>((opt_.time * 1000 / opt_.sampling_ms) + 10)); // Avoid overhead of allocation and page fault
         global_stats.resize(0);
 
-        static thread_local char value_out[value_generator_t::VALUE_MAX];
-        char* values_out;
 
         for(auto& lc : local_stats) {
             lc.times.resize(std::ceil(static_cast<uint64_t>(100000 * opt_.num_threads * opt_.time)));
             lc.times.resize(0);
         }
 
-        // Control variable of monitor thread
-        bool finished = false;
 
 
         omp_set_nested(true);
@@ -346,7 +343,7 @@ void benchmark_t::run() noexcept
             #pragma omp section // Monitor thread
             {
                 std::chrono::milliseconds sampling_window(opt_.sampling_ms);
-                while (!finished)
+                while (!finished.load())
                 {
                     std::this_thread::sleep_for(sampling_window);
                     stats_t s;
@@ -360,17 +357,17 @@ void benchmark_t::run() noexcept
 
             #pragma omp section // timer thread
             {
-                auto p = &finished;
+                //auto p = &finished;
                 stopwatch_t stopwatch;
                 std::chrono::milliseconds sampling_window(opt_.sampling_ms);
                 stopwatch.start();
-                while (!finished)
+                while (!finished.load())
                 {
                     std::this_thread::sleep_for(sampling_window);
                     //std::cout << "Now elapsed time:" << stopwatch.elapsed<std::chrono::seconds>() <<". Finish flag:" << std::boolalpha << finished <<"-"<<&finished << std::endl;
                     if(stopwatch.elapsed<std::chrono::milliseconds>() > opt_.time * 1000)
                     {
-                        finished = true;
+                        finished.store(true);
                         //std::cout << "Setting finished to true. Finish flag:" << std::boolalpha << finished << std::endl;
                         elapsed = stopwatch.elapsed<std::chrono::milliseconds>();
                     }
@@ -407,17 +404,11 @@ void benchmark_t::run() noexcept
 
                     auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
 
-                    //uint64_t i = 0;
 
                     #pragma omp barrier
 
-                    while(!finished)
+                    while(!finished.load())
                     {
-//                        ++i;
-//
-//                        if(i%1000000==0){
-//                            std::cout << "thread" << tid <<" Iteration:"<< i << ". Finish flag:" << finished <<"-" << &finished << std::endl;
-//                        }
 
                         // Generate random operation
                         auto op = op_generator_.next();
@@ -435,6 +426,7 @@ void benchmark_t::run() noexcept
                         //auto key_ptr = key_generator_->next(tid,key_generator_->current_id_,op == operation_t::INSERT ? true : false);
 
                         auto measure_latency = random_bool();
+
                         if(measure_latency)
                         {
                             local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
