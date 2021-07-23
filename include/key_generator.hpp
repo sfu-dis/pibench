@@ -122,6 +122,9 @@ protected:
     static thread_local std::default_random_engine generator_;
 
 private:
+    /// Format generated ID
+    void bits_shift(char *buf_ptr, uint64_t hashed_id);
+
     /// Seed used for generating random numbers.
     static thread_local uint32_t seed_;
 

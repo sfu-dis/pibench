@@ -256,52 +256,7 @@ void benchmark_t::run() noexcept
                             local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                         }
 
-                        switch (op)
-                        {
-                            case operation_t::READ:
-                            {
-                                auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
-                                assert(r);
-                                break;
-                            }
-
-                            case operation_t::INSERT:
-                            {
-                                // Generate random value
-                                auto value_ptr = value_generator_.next();
-                                auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                                assert(r);
-                                break;
-                            }
-
-                            case operation_t::UPDATE:
-                            {
-                                // Generate random value
-                                auto value_ptr = value_generator_.next();
-                                auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                                assert(r);
-                                break;
-                            }
-
-                            case operation_t::REMOVE:
-                            {
-                                auto r = tree_->remove(key_ptr, key_generator_->size());
-                                assert(r);
-                                break;
-                            }
-
-                            case operation_t::SCAN:
-                            {
-                                auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
-                                assert(r);
-                                break;
-                            }
-
-                            default:
-                                std::cout << "Error: unknown operation!" << std::endl;
-                                exit(0);
-                                break;
-                        }
+                        run_op(op,key_ptr,value_out,values_out);
 
                         if(measure_latency)
                         {
@@ -419,52 +374,7 @@ void benchmark_t::run() noexcept
                             local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                         }
 
-                        switch (op)
-                        {
-                            case operation_t::READ:
-                            {
-                                auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
-                                assert(r);
-                                break;
-                            }
-
-                            case operation_t::INSERT:
-                            {
-                                // Generate random value
-                                auto value_ptr = value_generator_.next();
-                                auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                                assert(r);
-                                break;
-                            }
-
-                            case operation_t::UPDATE:
-                            {
-                                // Generate random value
-                                auto value_ptr = value_generator_.next();
-                                auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                                assert(r);
-                                break;
-                            }
-
-                            case operation_t::REMOVE:
-                            {
-                                auto r = tree_->remove(key_ptr, key_generator_->size());
-                                assert(r);
-                                break;
-                            }
-
-                            case operation_t::SCAN:
-                            {
-                                auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
-                                assert(r);
-                                break;
-                            }
-
-                            default:
-                                std::cout << "Error: unknown operation!" << std::endl;
-                                exit(0);
-                                break;
-                        }
+                        run_op(op,key_ptr,value_out,values_out);
 
                         if(measure_latency)
                         {
@@ -546,6 +456,60 @@ void benchmark_t::run() noexcept
                   << "\tmax: " << global_latencies[observed-1] << std::endl;
     }
 }
+
+void benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value_out, char *values_out)
+{
+
+    //std::cout << key_ptr << std::endl;
+
+    switch (operation)
+    {
+        case operation_t::READ:
+        {
+            auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
+            //assert(r);
+            break;
+        }
+
+        case operation_t::INSERT:
+        {
+            // Generate random value
+            auto value_ptr = value_generator_.next();
+            auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+            //assert(r);
+            break;
+        }
+
+        case operation_t::UPDATE:
+        {
+            // Generate random value
+            auto value_ptr = value_generator_.next();
+            auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+            //assert(r);
+            break;
+        }
+
+        case operation_t::REMOVE:
+        {
+            auto r = tree_->remove(key_ptr, key_generator_->size());
+            //assert(r);
+            break;
+        }
+
+        case operation_t::SCAN:
+        {
+            auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
+            //assert(r);
+            break;
+        }
+
+        default:
+            std::cout << "Error: unknown operation!" << std::endl;
+            exit(0);
+            break;
+    }
+}
+
 } // namespace PiBench
 
 namespace std
@@ -574,7 +538,7 @@ std::ostream& operator<<(std::ostream& os, const PiBench::options_t& opt)
        << "\n"
        << "\tTarget: " << opt.library_file << "\n"
        << "\t# Records: " << opt.num_records << "\n"
-       << (opt.bm_mode ? "\t# Operations:" : "\t# Running time:") << (opt.bm_mode ? opt.num_ops : opt.time) << "\n"
+       << (opt.bm_mode ? "\t# Operations: " : "\t# Running time: ") << (opt.bm_mode ? opt.num_ops : opt.time) << "\n"
        << "\t# Threads: " << opt.num_threads << "\n"
        << "\tSampling: " << opt.sampling_ms << " ms\n"
        << "\tLatency: " << opt.latency_sampling << "\n"

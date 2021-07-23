@@ -26,37 +26,8 @@ const char* key_generator_t::next(bool in_sequence)
     uint64_t id = in_sequence ? current_id_++ : next_id();
     uint64_t hashed_id = utils::multiplicative_hash<uint64_t>(id);
 
-    if (size_ < sizeof(hashed_id))
-    {
-        // We want key smaller than 8 Bytes, so discard higher bits.
-        auto bits_to_shift = (sizeof(hashed_id) - size_) << 3;
+    bits_shift(ptr,hashed_id);
 
-        // Discard high order bits
-        if (utils::is_big_endian())
-        {
-            hashed_id >>= bits_to_shift;
-            hashed_id <<= bits_to_shift;
-        }
-        else
-        {
-            hashed_id <<= bits_to_shift;
-            hashed_id >>= bits_to_shift;
-        }
-
-        memcpy(ptr, &hashed_id, size_); // TODO: check if must change to fit endianess
-    }
-    else
-    {
-        // TODO: change this, otherwise zeroes act as prefix
-        // We want key of at least 8 Bytes, check if we must prepend zeroes
-        auto bytes_to_prepend = size_ - sizeof(hashed_id);
-        if (bytes_to_prepend > 0)
-        {
-            memset(ptr, 0, bytes_to_prepend);
-            ptr += bytes_to_prepend;
-        }
-        memcpy(ptr, &hashed_id, sizeof(hashed_id));
-    }
     return buf_;
 }
 
@@ -70,6 +41,13 @@ const char* key_generator_t::next(uint8_t tid, uint64_t counter, bool in_sequenc
     uint64_t id = in_sequence ? current_id_++ : next_id(counter);
     uint64_t hashed_id = utils::multiplicative_hash<uint64_t>(id);
 
+    bits_shift(ptr,hashed_id);
+
+    return buf_;
+}
+
+void key_generator_t::bits_shift(char *buf_ptr, uint64_t hashed_id)
+{
     if (size_ < sizeof(hashed_id))
     {
         // We want key smaller than 8 Bytes, so discard higher bits.
@@ -87,7 +65,7 @@ const char* key_generator_t::next(uint8_t tid, uint64_t counter, bool in_sequenc
             hashed_id >>= bits_to_shift;
         }
 
-        memcpy(ptr, &hashed_id, size_); // TODO: check if must change to fit endianess
+        memcpy(buf_ptr, &hashed_id, size_); // TODO: check if must change to fit endianess
     }
     else
     {
@@ -96,11 +74,10 @@ const char* key_generator_t::next(uint8_t tid, uint64_t counter, bool in_sequenc
         auto bytes_to_prepend = size_ - sizeof(hashed_id);
         if (bytes_to_prepend > 0)
         {
-            memset(ptr, 0, bytes_to_prepend);
-            ptr += bytes_to_prepend;
+            memset(buf_ptr, 0, bytes_to_prepend);
+            buf_ptr += bytes_to_prepend;
         }
-        memcpy(ptr, &hashed_id, sizeof(hashed_id));
+        memcpy(buf_ptr, &hashed_id, sizeof(hashed_id));
     }
-    return buf_;
 }
 } // namespace PiBench

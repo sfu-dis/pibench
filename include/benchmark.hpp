@@ -159,6 +159,16 @@ public:
     static constexpr size_t MAX_SCAN = 1000;
 
 private:
+    /**
+    * @brief Run single operation
+    *
+    * @param operation operation type
+    * @param key_ptr Pointer to the generated key
+    * @param value_out Pointer to store Read value
+    * @param values_out Pointer to store SCAN value
+    */
+    void run_op(operation_t operation, const char * key_ptr, char * value_out, char * values_out);
+
     /// Tree data structure being benchmarked.
     tree_api* tree_;
 
