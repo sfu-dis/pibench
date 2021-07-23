@@ -100,6 +100,9 @@ struct options_t
 
     /// Mode(FALSE:time based or TRUE:operation based)
     bool bm_mode = true;
+
+    /// Generate keys which are not in the index structure (used in false read/update)
+    bool false_access = false;
 };
 
 /**

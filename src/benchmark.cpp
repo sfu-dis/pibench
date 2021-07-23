@@ -181,6 +181,7 @@ void benchmark_t::run() noexcept
     float elapsed = 0.0;
 
     // Start Benchmark
+    // Opration based mode
     if(opt_.bm_mode)
     {
 
@@ -324,12 +325,13 @@ void benchmark_t::run() noexcept
 
 
     }
+    // Time based mode
     else
     {
         global_stats.resize(static_cast<uint64_t>((opt_.time * 1000 / opt_.sampling_ms) + 10)); // Avoid overhead of allocation and page fault
         global_stats.resize(0);
 
-
+        // Only an estimate size
         for(auto& lc : local_stats) {
             lc.times.resize(std::ceil(static_cast<uint64_t>(100000 * opt_.num_threads * opt_.time)));
             lc.times.resize(0);
@@ -355,20 +357,17 @@ void benchmark_t::run() noexcept
                 }
             }
 
-            #pragma omp section // timer thread
+            #pragma omp section // Timer thread
             {
-                //auto p = &finished;
                 stopwatch_t stopwatch;
                 std::chrono::milliseconds sampling_window(opt_.sampling_ms);
                 stopwatch.start();
                 while (!finished.load())
                 {
                     std::this_thread::sleep_for(sampling_window);
-                    //std::cout << "Now elapsed time:" << stopwatch.elapsed<std::chrono::seconds>() <<". Finish flag:" << std::boolalpha << finished <<"-"<<&finished << std::endl;
                     if(stopwatch.elapsed<std::chrono::milliseconds>() > opt_.time * 1000)
                     {
                         finished.store(true);
-                        //std::cout << "Setting finished to true. Finish flag:" << std::boolalpha << finished << std::endl;
                         elapsed = stopwatch.elapsed<std::chrono::milliseconds>();
                     }
                 }
@@ -391,14 +390,6 @@ void benchmark_t::run() noexcept
                     std::default_random_engine generator;
                     generator.seed(opt_.rnd_seed * (tid + 1));
 
-                    // Choosing tid prefix
-                    std::binomial_distribution<uint8_t> binomialDistribution(opt_.num_threads,
-                                                                             tid == 0 ? 1.0 / opt_.num_threads :
-                                                                             static_cast<double>(tid) / opt_.num_threads);
-                    // Choosing counter
-                    std::discrete_distribution<uint8_t> discreteDistribution{1,3};
-
-
                     // count total insert numbers for each thread
                     uint64_t counter = key_generator_->current_id_;
 
@@ -417,13 +408,12 @@ void benchmark_t::run() noexcept
 
                         // Generate random scrambled key
                         if(op == operation_t::INSERT)
-                            key_ptr = key_generator_->next(tid,key_generator_->current_id_, true);
+                            key_ptr = key_generator_->next(tid, key_generator_->current_id_, true);
+                        else if(op == operation_t::READ || op == operation_t::UPDATE)
+                            // Generate some unrepeated key for READ & UPDATE (if false_access == true)
+                            key_ptr = key_generator_->next(tid,opt_.false_access ? key_generator_->current_id_ * 1.2 : key_generator_->current_id_, false);
                         else
-                            key_ptr = key_generator_->next(binomialDistribution(generator),
-                                                           discreteDistribution(generator) == 0
-                                                           ? opt_.num_threads : key_generator_->current_id_,
-                                                           false);
-                        //auto key_ptr = key_generator_->next(tid,key_generator_->current_id_,op == operation_t::INSERT ? true : false);
+                            key_ptr = key_generator_->next(tid, key_generator_->current_id_, false);
 
                         auto measure_latency = random_bool();
 
@@ -606,7 +596,8 @@ std::ostream& operator<<(std::ostream& os, const PiBench::options_t& opt)
        << "\t\tInsert: " << opt.insert_ratio << "\n"
        << "\t\tUpdate: " << opt.update_ratio << "\n"
        << "\t\tDelete: " << opt.remove_ratio << "\n"
-       << "\t\tScan: " << opt.scan_ratio;
+       << "\t\tScan: " << opt.scan_ratio << "\n"
+       << "\t\tFalse access: " << std::boolalpha << opt.false_access;
     return os;
 }
 } // namespace std

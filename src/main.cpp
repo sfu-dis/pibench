@@ -38,6 +38,7 @@ int main(int argc, char** argv)
             ("d,remove_ratio", "Ratio of remove operations", cxxopts::value<float>()->default_value(std::to_string(opt.remove_ratio)))
             ("s,scan_ratio", "Ratio of scan operations", cxxopts::value<float>()->default_value(std::to_string(opt.scan_ratio)))
             ("scan_size", "Number of records to be scanned.", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.scan_size)))
+            ("false_access","Generate keys not in the index",cxxopts::value<bool>()->default_value((opt.false_access ? "true":"false")))
             ("sampling_ms", "Sampling window in milliseconds", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.sampling_ms)))
             ("distribution", "Key distribution to use", cxxopts::value<std::string>()->default_value("UNIFORM"))
             ("skew", "Key distribution skew factor to use", cxxopts::value<float>()->default_value(std::to_string(opt.key_skew)))
@@ -47,7 +48,7 @@ int main(int argc, char** argv)
             ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value(std::to_string(tree_opt.pool_size)))
             ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value((opt.skip_load ? "true" : "false")))
             ("latency_sampling", "Sample latency of requests", cxxopts::value<float>()->default_value(std::to_string(opt.latency_sampling)))
-            ("m,mode","Benchmark mode",cxxopts::value<bool>()->default_value((opt.bm_mode ? "true":"false")))
+            ("mode","Benchmark mode",cxxopts::value<bool>()->default_value((opt.bm_mode ? "true":"false")))
             ("time","Time PiBench run in time-based mode",cxxopts::value<float>()->default_value(std::to_string(opt.time)))
             ("help", "Print help")
         ;
@@ -185,6 +186,10 @@ int main(int argc, char** argv)
         if (result.count("time"))
             opt.time = result["time"].as<float>();
 
+        //Parse "false_access"
+        if(result.count("false_access"))
+            opt.false_access = result["false_access"].as<bool>();
+
 
     }
     catch (const cxxopts::OptionException& e)
@@ -217,6 +222,12 @@ int main(int argc, char** argv)
         if(opt.num_threads > 256)
         {
             std::cout << "In time-based mode, thread number must be less than 256." <<std::endl;
+            exit(1);
+        }
+
+        if(opt.time <= 0.0)
+        {
+            std::cout << "Benchmark running time must be larger than 0." <<std::endl;
             exit(1);
         }
     }
