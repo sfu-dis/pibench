@@ -26,7 +26,7 @@ CMake supports out-of-source builds, which means that binaries are generated in 
 
 The typical approach is to create a `build` folder inside the project root folder after cloning it with git:
 ```bash
-$ git clone --recursive https://github.com/wangtzh/pibench.git
+$ git clone --recursive https://github.com/sfu-dis/pibench.git
 $ cd pibench
 $ mkdir build
 ```
