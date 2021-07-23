@@ -11,7 +11,7 @@
 #include <fstream>
 #include <regex>            // std::regex_replace
 #include <sys/utsname.h>    // uname
-#include <atomic>
+#include <atomic> // std::atomic<T>
 
 namespace PiBench
 {
@@ -181,7 +181,7 @@ void benchmark_t::run() noexcept
     float elapsed = 0.0;
 
     // Start Benchmark
-    // Opration based mode
+    // Operation based mode
     if(opt_.bm_mode)
     {
 
@@ -193,8 +193,6 @@ void benchmark_t::run() noexcept
             lc.times.resize(std::ceil(opt_.num_ops/opt_.num_threads)*2);
             lc.times.resize(0);
         }
-
-
 
         // The amount of inserts expected to be done by each thread + some play room.
         uint64_t inserts_per_thread = 10 + (opt_.num_ops * opt_.insert_ratio) / opt_.num_threads;
@@ -323,7 +321,6 @@ void benchmark_t::run() noexcept
         }
         omp_set_nested(false);
 
-
     }
     // Time based mode
     else
@@ -365,7 +362,7 @@ void benchmark_t::run() noexcept
                 while (!finished.load())
                 {
                     std::this_thread::sleep_for(sampling_window);
-                    if(stopwatch.elapsed<std::chrono::milliseconds>() > opt_.time * 1000)
+                    if(stopwatch.elapsed<std::chrono::seconds>() > opt_.time)
                     {
                         finished.store(true);
                         elapsed = stopwatch.elapsed<std::chrono::milliseconds>();
@@ -427,7 +424,7 @@ void benchmark_t::run() noexcept
                             case operation_t::READ:
                             {
                                 auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
-                                //assert(r);
+                                assert(r);
                                 break;
                             }
 
@@ -436,7 +433,7 @@ void benchmark_t::run() noexcept
                                 // Generate random value
                                 auto value_ptr = value_generator_.next();
                                 auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                                //assert(r);
+                                assert(r);
                                 break;
                             }
 
@@ -445,21 +442,21 @@ void benchmark_t::run() noexcept
                                 // Generate random value
                                 auto value_ptr = value_generator_.next();
                                 auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                                //assert(r);
+                                assert(r);
                                 break;
                             }
 
                             case operation_t::REMOVE:
                             {
                                 auto r = tree_->remove(key_ptr, key_generator_->size());
-                                //assert(r);
+                                assert(r);
                                 break;
                             }
 
                             case operation_t::SCAN:
                             {
                                 auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
-                                //assert(r);
+                                assert(r);
                                 break;
                             }
 
