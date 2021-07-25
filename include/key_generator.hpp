@@ -37,10 +37,10 @@ public:
      *
      * @param N size of key space.
      * @param size size in Bytes of keys to be generated (excluding prefix).
-     * @param becnhmark_mode decides pibench's running mode( by number of ops or by time)
+     * @param benchmark_mode PiBench's running mode(operation based / time based)
      * @param prefix prefix to be prepended to every key.
      */
-    key_generator_t(size_t N, size_t size, bool benchmark_mode, const std::string& prefix = "");
+    key_generator_t(size_t N, size_t size, uint16_t thread_num, bool tid_prefix, const std::string& prefix = "");
 
     virtual ~key_generator_t() = default;
 
@@ -79,11 +79,11 @@ public:
     virtual const char* next(uint8_t tid, uint64_t counter, bool in_sequence = false) final;
 
     /**
-     * @brief Returns total key size (including prefix).
+     * @brief Returns total key size (including prefix and tid(time-based mode)).
      *
      * @return size_t
      */
-    size_t size() const noexcept { return prefix_.size() + size_; }
+    size_t size() const noexcept { return tid_prefix ? prefix_.size() + size_ + 1 : prefix_.size() + size_ ; }
 
     /**
      * @brief Returns size of keyspace in number of elements..
@@ -114,6 +114,9 @@ public:
 
     static thread_local uint64_t current_id_;
 
+    /// Storing the number of inserts with different thread ID (used as current ID)
+    std::vector<uint64_t> thread_stat;
+
 protected:
     virtual uint64_t next_id() = 0;
     virtual uint64_t next_id(uint64_t upper_bound) = 0;
@@ -142,16 +145,17 @@ private:
 
     //uint64_t current_id_ = 0;
 
-    //op-based(true) time based(false)
-    const bool benchmark_mode;
+    /// Flag: whether tid become a part of the prefix
+    bool tid_prefix;
+
 };
 
 class uniform_key_generator_t final : public key_generator_t
 {
 public:
-    uniform_key_generator_t(size_t N, size_t size, bool benchmark_mode, const std::string& prefix = "")
+    uniform_key_generator_t(size_t N, size_t size, uint16_t thread_num, bool tid_prefix, const std::string& prefix = "")
         : dist_(1, N),
-          key_generator_t(N, size, benchmark_mode, prefix) {}
+          key_generator_t(N, size, thread_num, tid_prefix, prefix) {}
 
 protected:
     virtual uint64_t next_id() override
@@ -161,9 +165,8 @@ protected:
 
     virtual uint64_t next_id(uint64_t upper_bound) override
     {
-        decltype(dist_.param()) range(1,upper_bound);
-        dist_.param(range);
-        return dist_(generator_);
+        std::uniform_int_distribution<uint64_t> tmp_dist(1,upper_bound);
+        return tmp_dist(generator_);
     }
 
 private:
@@ -173,9 +176,9 @@ private:
 class selfsimilar_key_generator_t final : public key_generator_t
 {
 public:
-    selfsimilar_key_generator_t(size_t N, size_t size, bool benchmark_mode, const std::string& prefix = "", float skew = 0.2)
+    selfsimilar_key_generator_t(size_t N, size_t size, uint16_t thread_num, bool tid_prefix, const std::string& prefix = "", float skew = 0.2)
         : dist_(1, N, skew),
-          key_generator_t(N, size, benchmark_mode, prefix),
+          key_generator_t(N, size, thread_num, tid_prefix, prefix),
           skew_(skew)
     {
     }
@@ -187,9 +190,8 @@ public:
 
     virtual uint64_t next_id(uint64_t upper_bound) override
     {
-        decltype(dist_.param()) range(1,upper_bound,skew_);
-        dist_.param(range);
-        return dist_(generator_);
+        selfsimilar_int_distribution<uint64_t> tmp_dist(1,upper_bound,skew_);
+        return tmp_dist(generator_);
     }
 
 private:
@@ -200,9 +202,9 @@ private:
 class zipfian_key_generator_t final : public key_generator_t
 {
 public:
-    zipfian_key_generator_t(size_t N, size_t size, bool benchmark_mode, const std::string& prefix = "", float skew = 0.99)
+    zipfian_key_generator_t(size_t N, size_t size, uint16_t thread_num, bool tid_prefix, const std::string& prefix = "", float skew = 0.99)
         : dist_(1, N, skew),
-          key_generator_t(N, size, benchmark_mode, prefix),
+          key_generator_t(N, size, thread_num, tid_prefix, prefix),
           skew_(skew)
     {
     }
@@ -214,9 +216,8 @@ public:
 
     virtual uint64_t next_id(uint64_t upper_bound) override
     {
-        decltype(dist_.param()) range(1,upper_bound,skew_);
-        dist_.param(range);
-        return dist_(generator_);
+        zipfian_int_distribution<uint64_t> tmp_dist(1,upper_bound,skew_);
+        return tmp_dist(generator_);
     }
 private:
     zipfian_int_distribution<uint64_t> dist_;

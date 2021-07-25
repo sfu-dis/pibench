@@ -9,11 +9,12 @@ thread_local uint32_t key_generator_t::seed_;
 thread_local char key_generator_t::buf_[KEY_MAX];
 thread_local uint64_t key_generator_t::current_id_ = 1;
 
-key_generator_t::key_generator_t(size_t N, size_t size, bool benchmark_mode, const std::string& prefix)
+key_generator_t::key_generator_t(size_t N, size_t size, uint16_t thread_num, bool tid_prefix, const std::string& prefix)
     : N_(N),
       size_(size),
       prefix_(prefix),
-      benchmark_mode(benchmark_mode)
+      tid_prefix(tid_prefix),
+      thread_stat(thread_num,1)
 {
     memset(buf_, 0, KEY_MAX);
     memcpy(buf_, prefix_.c_str(), prefix_.size());
@@ -38,7 +39,8 @@ const char* key_generator_t::next(uint8_t tid, uint64_t counter, bool in_sequenc
     memcpy(ptr,&tid,1);
     ptr = &buf_[prefix_.size()+1];
 
-    uint64_t id = in_sequence ? current_id_++ : next_id(counter);
+
+    uint64_t id = in_sequence ? thread_stat[tid]++ : next_id(counter);
     uint64_t hashed_id = utils::multiplicative_hash<uint64_t>(id);
 
     bits_shift(ptr,hashed_id);

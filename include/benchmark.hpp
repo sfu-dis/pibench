@@ -19,6 +19,17 @@ namespace PiBench
 void print_environment();
 
 /**
+ * @brief Benchmark mode
+ */
+enum class mode_t : uint8_t
+{
+    Operation = 0,
+    Time = 1,
+};
+
+
+
+/**
  * @brief Supported random number distributions.
  *
  */
@@ -99,7 +110,7 @@ struct options_t
     float time = 0.0;
 
     /// Mode(FALSE:time based or TRUE:operation based)
-    bool bm_mode = true;
+    mode_t bm_mode = mode_t::Operation;
 
     /// Generate keys which are not in the index structure (used in false read/update)
     bool false_access = false;

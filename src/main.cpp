@@ -48,7 +48,7 @@ int main(int argc, char** argv)
             ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value(std::to_string(tree_opt.pool_size)))
             ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value((opt.skip_load ? "true" : "false")))
             ("latency_sampling", "Sample latency of requests", cxxopts::value<float>()->default_value(std::to_string(opt.latency_sampling)))
-            ("mode","Benchmark mode",cxxopts::value<bool>()->default_value((opt.bm_mode ? "true":"false")))
+            ("mode","Benchmark mode",cxxopts::value<std::string>()->default_value("operation"))
             ("time","Time PiBench run in time-based mode",cxxopts::value<float>()->default_value(std::to_string(opt.time)))
             ("help", "Print help")
         ;
@@ -180,7 +180,19 @@ int main(int argc, char** argv)
 
         // Parse "mode"
         if (result.count("mode"))
-            opt.bm_mode = result["mode"].as<bool>();
+        {
+            std::string mode = result["mode"].as<std::string>();
+            std::transform(mode.begin(),mode.end(),mode.begin(),::tolower);
+            if(mode.compare("operation") == 0)
+                opt.bm_mode = PiBench::mode_t::Operation;
+            else if(mode.compare("time") == 0)
+                opt.bm_mode = PiBench::mode_t::Time;
+            else
+            {
+                std::cout << "Mode must be one of [operation | time]" << std::endl;
+                exit(1);
+            }
+        }
 
         // Parse "time"
         if (result.count("time"))
@@ -199,7 +211,7 @@ int main(int argc, char** argv)
     }
 
     // Sanitize options
-    if(opt.bm_mode)
+    if(opt.bm_mode == PiBench::mode_t::Operation)
     {
         if(opt.key_prefix.size() + opt.key_size > key_generator_t::KEY_MAX)
         {
@@ -275,7 +287,7 @@ int main(int argc, char** argv)
     print_environment();
     std::cout << opt << std::endl;
 
-    tree_opt.key_size = opt.key_prefix.size() + opt.key_size;
+    tree_opt.key_size = opt.key_prefix.size() + opt.key_size + (opt.bm_mode == PiBench::mode_t::Time ? 1:0);
     tree_opt.value_size = opt.value_size;
     tree_opt.num_threads = opt.num_threads;
 

@@ -102,15 +102,15 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
     switch (opt_.key_distribution)
     {
         case distribution_t::UNIFORM:
-            key_generator_ = std::make_unique<uniform_key_generator_t>(key_space_sz, opt_.key_size, opt_.bm_mode, opt_.key_prefix);
+            key_generator_ = std::make_unique<uniform_key_generator_t>(key_space_sz, opt_.key_size, opt_.num_threads, opt_.bm_mode == mode_t::Operation ? false : true, opt_.key_prefix);
             break;
 
         case distribution_t::SELFSIMILAR:
-            key_generator_ = std::make_unique<selfsimilar_key_generator_t>(key_space_sz, opt_.key_size, opt_.bm_mode, opt_.key_prefix, opt_.key_skew);
+            key_generator_ = std::make_unique<selfsimilar_key_generator_t>(key_space_sz, opt_.key_size, opt_.num_threads, opt_.bm_mode == mode_t::Operation ? false : true, opt_.key_prefix, opt_.key_skew);
             break;
 
         case distribution_t::ZIPFIAN:
-            key_generator_ = std::make_unique<zipfian_key_generator_t>(key_space_sz, opt_.key_size, opt_.bm_mode, opt_.key_prefix, opt_.key_skew);
+            key_generator_ = std::make_unique<zipfian_key_generator_t>(key_space_sz, opt_.key_size, opt_.num_threads, opt_.bm_mode == mode_t::Operation ? false : true, opt_.key_prefix, opt_.key_skew);
             break;
 
         default:
@@ -133,17 +133,16 @@ void benchmark_t::load() noexcept
         return;
     }
 
-//    /// Generating tid prefix when running time based benchmark
-//    std::default_random_engine randomEngine(time(NULL));
-//    std::uniform_int_distribution<uint8_t> dis(0,static_cast<uint8_t>(opt_.num_threads));
-
+    /// Generating tid prefix when running time based benchmark
+    std::default_random_engine randomEngine(time(NULL));
+    std::uniform_int_distribution<uint8_t> dis(0,static_cast<uint8_t>(opt_.num_threads-1));
 
     stopwatch_t sw;
     sw.start();
     for (uint64_t i = 0; i < opt_.num_records; ++i)
     {
         // Generate key in sequence
-        auto key_ptr = opt_.bm_mode? key_generator_->next(true) : key_generator_->next(0,0,true);
+        auto key_ptr = opt_.bm_mode == mode_t::Operation ? key_generator_->next(true) : key_generator_->next(dis(randomEngine), 0, true);
 
         // Generate random value
         auto value_ptr = value_generator_.next();
@@ -165,6 +164,30 @@ void benchmark_t::run() noexcept
 
     std::vector<stats_t> local_stats(opt_.num_threads);
 
+    global_stats.resize(
+            opt_.bm_mode == mode_t::Operation ? 100000 :
+                                                        static_cast<uint64_t>((opt_.time * 1000 / opt_.sampling_ms) + 10)); // Avoid overhead of allocation and page fault
+    global_stats.resize(0);
+
+    if(opt_.bm_mode == mode_t::Operation)
+    {
+        for(auto& lc : local_stats)
+        {
+            lc.times.resize(std::ceil(opt_.num_ops / opt_.num_threads * 2 ));
+            lc.times.resize(0);
+        }
+    }
+
+    else
+    {
+        for(auto& lc : local_stats)
+        {
+            lc.times.resize(std::ceil(static_cast<uint64_t>(100000 * opt_.num_threads *  opt_.time)));
+            lc.times.resize(0);
+        }
+    }
+
+
     static thread_local char value_out[value_generator_t::VALUE_MAX];
     char* values_out;
 
@@ -182,17 +205,9 @@ void benchmark_t::run() noexcept
 
     // Start Benchmark
     // Operation based mode
-    if(opt_.bm_mode)
+    if(opt_.bm_mode == mode_t::Operation)
     {
 
-        global_stats.resize(100000); // Avoid overhead of allocation and page fault
-        global_stats.resize(0);
-
-
-        for(auto& lc : local_stats) {
-            lc.times.resize(std::ceil(opt_.num_ops/opt_.num_threads)*2);
-            lc.times.resize(0);
-        }
 
         // The amount of inserts expected to be done by each thread + some play room.
         uint64_t inserts_per_thread = 10 + (opt_.num_ops * opt_.insert_ratio) / opt_.num_threads;
@@ -280,16 +295,6 @@ void benchmark_t::run() noexcept
     // Time based mode
     else
     {
-        global_stats.resize(static_cast<uint64_t>((opt_.time * 1000 / opt_.sampling_ms) + 10)); // Avoid overhead of allocation and page fault
-        global_stats.resize(0);
-
-        // Only an estimate size
-        for(auto& lc : local_stats) {
-            lc.times.resize(std::ceil(static_cast<uint64_t>(100000 * opt_.num_threads * opt_.time)));
-            lc.times.resize(0);
-        }
-
-
 
         omp_set_nested(true);
         #pragma omp parallel sections num_threads(3) default(none) shared(finished,local_stats,global_stats,elapsed,values_out,std::cout)
@@ -333,17 +338,8 @@ void benchmark_t::run() noexcept
 
                     key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
 
-                    if(tid==0)
-                        key_generator_->current_id_ = opt_.num_records;
-                    else
-                        key_generator_->current_id_ = 0;
-
-
-                    std::default_random_engine generator;
-                    generator.seed(opt_.rnd_seed * (tid + 1));
-
-                    // count total insert numbers for each thread
-                    uint64_t counter = key_generator_->current_id_;
+                    // How many inserts are within this thread ID's range
+                    key_generator_->current_id_ = key_generator_->thread_stat[tid];
 
                     auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
 
@@ -363,9 +359,9 @@ void benchmark_t::run() noexcept
                             key_ptr = key_generator_->next(tid, key_generator_->current_id_, true);
                         else if(op == operation_t::READ || op == operation_t::UPDATE)
                             // Generate some unrepeated key for READ & UPDATE (if false_access == true)
-                            key_ptr = key_generator_->next(tid,opt_.false_access ? key_generator_->current_id_ * 1.2 : key_generator_->current_id_, false);
+                            key_ptr = key_generator_->next(tid,opt_.false_access ? key_generator_->thread_stat[tid] * 1.2 : key_generator_->thread_stat[tid]-1, false);
                         else
-                            key_ptr = key_generator_->next(tid, key_generator_->current_id_, false);
+                            key_ptr = key_generator_->next(tid, key_generator_->current_id_-1, false);
 
                         auto measure_latency = random_bool();
 
@@ -392,14 +388,15 @@ void benchmark_t::run() noexcept
     std::unique_ptr<SystemCounterState> after_sstate;
     if (opt_.enable_pcm)
     {
-        after_sstate = std::make_unique<SystemCounterState>();
+        after_sstate = std::make_unique<SystemCounterState>();    /// Storing the number of inserts with different thread ID
+    std::vector<uint64_t> thread_stat;
         *after_sstate = getSystemCounterState();
     }
 
     std::cout << std::fixed << std::setprecision(4);
     std::cout << "\tRun time: " << elapsed << " milliseconds" << std::endl;
 
-    if(opt_.bm_mode)
+    if(opt_.bm_mode == mode_t::Operation)
     {
         std::cout << "\tThroughput: " << opt_.num_ops / ((float)elapsed / 1000)
                   << " ops/s" << std::endl;
@@ -459,15 +456,12 @@ void benchmark_t::run() noexcept
 
 void benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value_out, char *values_out)
 {
-
-    //std::cout << key_ptr << std::endl;
-
     switch (operation)
     {
         case operation_t::READ:
         {
             auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
-            //assert(r);
+            assert(r);
             break;
         }
 
@@ -476,7 +470,7 @@ void benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value
             // Generate random value
             auto value_ptr = value_generator_.next();
             auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-            //assert(r);
+            assert(r);
             break;
         }
 
@@ -485,21 +479,21 @@ void benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value
             // Generate random value
             auto value_ptr = value_generator_.next();
             auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-            //assert(r);
+            assert(r);
             break;
         }
 
         case operation_t::REMOVE:
         {
             auto r = tree_->remove(key_ptr, key_generator_->size());
-            //assert(r);
+            assert(r);
             break;
         }
 
         case operation_t::SCAN:
         {
             auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
-            //assert(r);
+            assert(r);
             break;
         }
 
@@ -538,7 +532,7 @@ std::ostream& operator<<(std::ostream& os, const PiBench::options_t& opt)
        << "\n"
        << "\tTarget: " << opt.library_file << "\n"
        << "\t# Records: " << opt.num_records << "\n"
-       << (opt.bm_mode ? "\t# Operations: " : "\t# Running time: ") << (opt.bm_mode ? opt.num_ops : opt.time) << "\n"
+       << (opt.bm_mode == PiBench::mode_t::Operation ? "\t# Operations: " : "\t# Running time: ") << (opt.bm_mode == PiBench::mode_t::Operation ? opt.num_ops : opt.time) << "\n"
        << "\t# Threads: " << opt.num_threads << "\n"
        << "\tSampling: " << opt.sampling_ms << " ms\n"
        << "\tLatency: " << opt.latency_sampling << "\n"
