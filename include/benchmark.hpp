@@ -123,12 +123,14 @@ struct options_t
 struct alignas(64) stats_t
 {
     stats_t()
-        : operation_count(0)
+        : operation_count(0),
+        operation_count_F(0)
     {
     }
 
     /// Number of operations completed.
     uint64_t operation_count;
+    uint64_t operation_count_F;
 
     /// Vector to store both start and end time of requests.
     std::vector<std::chrono::high_resolution_clock::time_point> times;
@@ -178,7 +180,7 @@ private:
     * @param value_out Pointer to store Read value
     * @param values_out Pointer to store SCAN value
     */
-    void run_op(operation_t operation, const char * key_ptr, char * value_out, char * values_out);
+    bool run_op(operation_t operation, const char * key_ptr, char * value_out, char * values_out);
 
     /// Tree data structure being benchmarked.
     tree_api* tree_;

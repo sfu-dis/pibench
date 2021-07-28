@@ -271,7 +271,8 @@ void benchmark_t::run() noexcept
                             local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                         }
 
-                        run_op(op,key_ptr,value_out,values_out);
+                        if(!run_op(op,key_ptr,value_out,values_out))
+                            ++local_stats[tid].operation_count_F;
 
                         if(measure_latency)
                         {
@@ -343,6 +344,7 @@ void benchmark_t::run() noexcept
 
                     auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
 
+                    bool r;
 
                     #pragma omp barrier
 
@@ -370,7 +372,8 @@ void benchmark_t::run() noexcept
                             local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                         }
 
-                        run_op(op,key_ptr,value_out,values_out);
+                        if(!run_op(op,key_ptr,value_out,values_out))
+                            ++local_stats[tid].operation_count_F;
 
                         if(measure_latency)
                         {
@@ -396,10 +399,16 @@ void benchmark_t::run() noexcept
     std::cout << std::fixed << std::setprecision(4);
     std::cout << "\tRun time: " << elapsed << " milliseconds" << std::endl;
 
+    // False operation number
+    uint64_t op_num_f = 0;
+    for(auto &lc: local_stats)
+        op_num_f+=lc.operation_count_F;
+
     if(opt_.bm_mode == mode_t::Operation)
     {
         std::cout << "\tThroughput: " << opt_.num_ops / ((float)elapsed / 1000)
                   << " ops/s" << std::endl;
+        std::cout << "\tFalse access rate: " << (float)op_num_f * 100.0 / opt_.num_ops << "%" <<std::endl;
     }
     else
     {
@@ -409,8 +418,9 @@ void benchmark_t::run() noexcept
             op_num += lc.operation_count;
         std::cout << "\tThroughput: " << op_num / ((float)elapsed / 1000)
                   << " ops/s" << std::endl;
+        std::cout << "\tFalse access rate: " << ((float)op_num_f * 100.0 / op_num) << "%" <<std::endl;
     }
-
+ 
     if (opt_.enable_pcm)
     {
         std::cout << "PCM Metrics:"
@@ -454,14 +464,15 @@ void benchmark_t::run() noexcept
     }
 }
 
-void benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value_out, char *values_out)
+bool benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value_out, char *values_out)
 {
+    bool r;
     switch (operation)
     {
         case operation_t::READ:
         {
-            auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
-            assert(r);
+            r = tree_->find(key_ptr, key_generator_->size(), value_out);
+            //assert(r);
             break;
         }
 
@@ -469,8 +480,8 @@ void benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value
         {
             // Generate random value
             auto value_ptr = value_generator_.next();
-            auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-            assert(r);
+            r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+            //assert(r);
             break;
         }
 
@@ -478,22 +489,22 @@ void benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value
         {
             // Generate random value
             auto value_ptr = value_generator_.next();
-            auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-            assert(r);
+            r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+            //assert(r);
             break;
         }
 
         case operation_t::REMOVE:
         {
-            auto r = tree_->remove(key_ptr, key_generator_->size());
-            assert(r);
+            r = tree_->remove(key_ptr, key_generator_->size());
+            //assert(r);
             break;
         }
 
         case operation_t::SCAN:
         {
-            auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
-            assert(r);
+            r = static_cast<bool>(tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out));
+            //assert(r);
             break;
         }
 
@@ -502,6 +513,7 @@ void benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value
             exit(0);
             break;
     }
+    return r;
 }
 
 } // namespace PiBench
