@@ -127,22 +127,44 @@ benchmark_t::~benchmark_t()
 
 void benchmark_t::load() noexcept
 {
+    uint64_t insert_per_thread = opt_.num_records / opt_.num_threads;
+
     if(opt_.skip_load)
     {
-        key_generator_->current_id_ = opt_.num_records + 1;
+        if(opt_.bm_mode == mode_t::Operation)
+        {
+            key_generator_->current_id_ = opt_.num_records + 1;
+        }
+        else if(opt_.bm_mode == mode_t::Time)
+        {
+            for(uint16_t i =0; i <opt_.num_threads; i++)
+            {
+                if(i!=opt_.num_threads-1)
+                    key_generator_->thread_stat[i] = insert_per_thread + 1;
+                else
+                    key_generator_->thread_stat[i] = opt_.num_records % opt_.num_threads + insert_per_thread + 1;
+            }
+        }
         return;
     }
 
     /// Generating tid prefix when running time based benchmark
-    std::default_random_engine randomEngine(time(NULL));
-    std::uniform_int_distribution<uint8_t> dis(0,static_cast<uint8_t>(opt_.num_threads-1));
+    auto tid_generate = [insert_per_thread](uint64_t i, uint64_t num_threads){
+        if(i < insert_per_thread * num_threads){
+            return i / insert_per_thread;
+        }
+        else
+        {
+            return num_threads - 1;
+        }
+    };
 
     stopwatch_t sw;
     sw.start();
     for (uint64_t i = 0; i < opt_.num_records; ++i)
     {
         // Generate key in sequence
-        auto key_ptr = opt_.bm_mode == mode_t::Operation ? key_generator_->next(true) : key_generator_->next(dis(randomEngine), 0, true);
+        auto key_ptr = opt_.bm_mode == mode_t::Operation ? key_generator_->next(true) : key_generator_->next(tid_generate(i,opt_.num_threads), 0, true);
 
         // Generate random value
         auto value_ptr = value_generator_.next();
@@ -363,7 +385,7 @@ void benchmark_t::run() noexcept
                             // Generate some unrepeated key for READ & UPDATE (if false_access == true)
                             key_ptr = key_generator_->next(tid,opt_.false_access ? key_generator_->thread_stat[tid] * 1.2 : key_generator_->thread_stat[tid]-1, false);
                         else
-                            key_ptr = key_generator_->next(tid, key_generator_->current_id_-1, false);
+                            key_ptr = key_generator_->next(tid, key_generator_->thread_stat[tid]-1, false);
 
                         auto measure_latency = random_bool();
 

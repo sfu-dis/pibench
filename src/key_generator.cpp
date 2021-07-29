@@ -13,9 +13,13 @@ key_generator_t::key_generator_t(size_t N, size_t size, uint16_t thread_num, boo
     : N_(N),
       size_(size),
       prefix_(prefix),
-      tid_prefix(tid_prefix),
-      thread_stat(thread_num,1)
+      tid_prefix(tid_prefix)
 {
+    thread_stat = new uint64_t [thread_num]();
+    for(int i=0; i<thread_num; i++)
+    {
+        thread_stat[i] = 1;
+    }
     memset(buf_, 0, KEY_MAX);
     memcpy(buf_, prefix_.c_str(), prefix_.size());
 }

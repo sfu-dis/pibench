@@ -115,7 +115,7 @@ public:
     static thread_local uint64_t current_id_;
 
     /// Storing the number of inserts with different thread ID (used as current ID)
-    std::vector<uint64_t> thread_stat;
+    uint64_t* thread_stat;
 
 protected:
     virtual uint64_t next_id() = 0;
