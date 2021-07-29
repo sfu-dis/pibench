@@ -494,7 +494,7 @@ bool benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value
         case operation_t::READ:
         {
             r = tree_->find(key_ptr, key_generator_->size(), value_out);
-            //assert(r);
+            assert(r);
             break;
         }
 
@@ -503,7 +503,7 @@ bool benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value
             // Generate random value
             auto value_ptr = value_generator_.next();
             r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-            //assert(r);
+            assert(r);
             break;
         }
 
@@ -512,21 +512,21 @@ bool benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value
             // Generate random value
             auto value_ptr = value_generator_.next();
             r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-            //assert(r);
+            assert(r);
             break;
         }
 
         case operation_t::REMOVE:
         {
             r = tree_->remove(key_ptr, key_generator_->size());
-            //assert(r);
+            assert(r);
             break;
         }
 
         case operation_t::SCAN:
         {
             r = static_cast<bool>(tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out));
-            //assert(r);
+            assert(r);
             break;
         }
 
