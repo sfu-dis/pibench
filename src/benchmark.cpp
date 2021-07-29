@@ -518,6 +518,7 @@ bool benchmark_t::run_op(operation_t operation, const char *key_ptr, char *value
 
         case operation_t::REMOVE:
         {
+            // TODO: Randomly deleting keys will cause false read,update and scan
             r = tree_->remove(key_ptr, key_generator_->size());
             assert(r);
             break;
