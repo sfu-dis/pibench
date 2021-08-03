@@ -223,6 +223,7 @@ void benchmark_t::run() noexcept
         *before_sstate = getSystemCounterState();
     }
 
+    stopwatch_t stopwatch;
     float elapsed = 0.0;
 
     // Start Benchmark
@@ -237,7 +238,6 @@ void benchmark_t::run() noexcept
         // Current id after load
         uint64_t current_id = key_generator_->current_id_;
 
-        stopwatch_t sw;
         omp_set_nested(true);
         #pragma omp parallel sections num_threads(2)
         {
@@ -275,7 +275,7 @@ void benchmark_t::run() noexcept
 
                     #pragma omp single nowait
                     {
-                        sw.start();
+                        stopwatch.start();
                     }
 
                     #pragma omp for schedule(static)
@@ -306,7 +306,7 @@ void benchmark_t::run() noexcept
                     // Get elapsed time and signal monitor thread to finish.
                     #pragma omp single nowait
                     {
-                        elapsed = sw.elapsed<std::chrono::milliseconds>();
+                        elapsed = stopwatch.elapsed<std::chrono::milliseconds>();
                         finished.store(true);
                     }
                 }
@@ -320,9 +320,9 @@ void benchmark_t::run() noexcept
     {
 
         omp_set_nested(true);
-        #pragma omp parallel sections num_threads(3) default(none) shared(finished,local_stats,global_stats,elapsed,values_out,std::cout)
+        #pragma omp parallel sections num_threads(2) default(none) shared(finished,local_stats,global_stats,elapsed,values_out,std::cout,stopwatch)
         {
-            #pragma omp section // Monitor thread
+            #pragma omp section // Monitor & timer thread
             {
                 std::chrono::milliseconds sampling_window(opt_.sampling_ms);
                 while (!finished.load())
@@ -334,17 +334,6 @@ void benchmark_t::run() noexcept
                                                             return sum + curr.operation_count;
                                                         });
                     global_stats.push_back(std::move(s));
-                }
-            }
-
-            #pragma omp section // Timer thread
-            {
-                stopwatch_t stopwatch;
-                std::chrono::milliseconds sampling_window(opt_.sampling_ms);
-                stopwatch.start();
-                while (!finished.load())
-                {
-                    std::this_thread::sleep_for(sampling_window);
                     if(stopwatch.elapsed<std::chrono::seconds>() > opt_.time)
                     {
                         finished.store(true);
@@ -352,6 +341,7 @@ void benchmark_t::run() noexcept
                     }
                 }
             }
+
 
             #pragma omp section // Worker threads
             {
@@ -366,9 +356,12 @@ void benchmark_t::run() noexcept
 
                     auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
 
-                    bool r;
-
                     #pragma omp barrier
+
+                    #pragma single nowait
+                    {
+                        stopwatch.start();
+                    }
 
                     while(!finished.load())
                     {
@@ -382,8 +375,9 @@ void benchmark_t::run() noexcept
                         if(op == operation_t::INSERT)
                             key_ptr = key_generator_->next(tid, key_generator_->current_id_, true);
                         else if(op == operation_t::READ || op == operation_t::UPDATE)
-                            // Generate some unrepeated key for READ & UPDATE (if false_access == true)
-                            key_ptr = key_generator_->next(tid,opt_.false_access ? key_generator_->thread_stat[tid] * 1.2 : key_generator_->thread_stat[tid]-1, false);
+                            // Generate some unrepeated key for READ & UPDATE (if negative_access == true)
+                            // TODO: Make sure to generate a negative access key(dividing next() to two parts)
+                            key_ptr = key_generator_->next(tid, opt_.negative_access ? key_generator_->thread_stat[tid] * 1.2 : key_generator_->thread_stat[tid] - 1, false);
                         else
                             key_ptr = key_generator_->next(tid, key_generator_->thread_stat[tid]-1, false);
 
@@ -414,7 +408,6 @@ void benchmark_t::run() noexcept
     if (opt_.enable_pcm)
     {
         after_sstate = std::make_unique<SystemCounterState>();    /// Storing the number of inserts with different thread ID
-    std::vector<uint64_t> thread_stat;
         *after_sstate = getSystemCounterState();
     }
 
@@ -587,7 +580,7 @@ std::ostream& operator<<(std::ostream& os, const PiBench::options_t& opt)
        << "\t\tUpdate: " << opt.update_ratio << "\n"
        << "\t\tDelete: " << opt.remove_ratio << "\n"
        << "\t\tScan: " << opt.scan_ratio << "\n"
-       << "\t\tFalse access: " << std::boolalpha << opt.false_access;
+       << "\t\tFalse access: " << std::boolalpha << opt.negative_access;
     return os;
 }
 } // namespace std

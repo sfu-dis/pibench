@@ -112,8 +112,8 @@ struct options_t
     /// Mode(FALSE:time based or TRUE:operation based)
     mode_t bm_mode = mode_t::Operation;
 
-    /// Generate keys which are not in the index structure (used in false read/update)
-    bool false_access = false;
+    /// Generate keys which are not in the index structure (used in negative read/update)
+    bool negative_access = false;
 };
 
 /**

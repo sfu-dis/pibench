@@ -38,7 +38,7 @@ int main(int argc, char** argv)
             ("d,remove_ratio", "Ratio of remove operations", cxxopts::value<float>()->default_value(std::to_string(opt.remove_ratio)))
             ("s,scan_ratio", "Ratio of scan operations", cxxopts::value<float>()->default_value(std::to_string(opt.scan_ratio)))
             ("scan_size", "Number of records to be scanned.", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.scan_size)))
-            ("false_access","Generate keys not in the index",cxxopts::value<bool>()->default_value((opt.false_access ? "true":"false")))
+            ("negative_access","Generate keys not in the index",cxxopts::value<bool>()->default_value((opt.negative_access ? "true" : "false")))
             ("sampling_ms", "Sampling window in milliseconds", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.sampling_ms)))
             ("distribution", "Key distribution to use", cxxopts::value<std::string>()->default_value("UNIFORM"))
             ("skew", "Key distribution skew factor to use", cxxopts::value<float>()->default_value(std::to_string(opt.key_skew)))
@@ -198,9 +198,9 @@ int main(int argc, char** argv)
         if (result.count("time"))
             opt.time = result["time"].as<float>();
 
-        //Parse "false_access"
-        if(result.count("false_access"))
-            opt.false_access = result["false_access"].as<bool>();
+        //Parse "negative_access"
+        if(result.count("negative_access"))
+            opt.negative_access = result["negative_access"].as<bool>();
 
 
     }

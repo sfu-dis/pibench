@@ -104,7 +104,7 @@ Usage:
   -d, --remove_ratio arg  Ratio of remove operations (default: 0)
   -s, --scan_ratio arg    Ratio of scan operations (default: 0)
       --scan_size arg     Number of records to be scanned. (default: 100)
-      --false_access(T/F) Flag for generating unrepeated keys (default:false)
+      --negative_access(T/F)  Flag for generating unrepeated keys (default:false)
       --sampling_ms arg   Sampling window in milliseconds (default: 1000)
       --distribution arg  Key distribution to use (default: UNIFORM)
       --skew arg          Key distribution skew factor to use (default: 0.2)
