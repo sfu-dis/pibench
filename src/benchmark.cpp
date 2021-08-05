@@ -226,6 +226,8 @@ void benchmark_t::run() noexcept
     stopwatch_t stopwatch;
     float elapsed = 0.0;
 
+    std::discrete_distribution<bool> dis {opt_.negative_access_rate, 1-opt_.negative_access_rate};
+
     // Start Benchmark
     // Operation based mode
     if(opt_.bm_mode == mode_t::Operation)
@@ -267,6 +269,7 @@ void benchmark_t::run() noexcept
                     key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
 
                     // Initialize insert id for each thread
+                    // TODO(Yuan Meng) Current way of specifying current_id cannot assure every key generated exists in the index tree
                     key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
 
                     auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
@@ -285,7 +288,7 @@ void benchmark_t::run() noexcept
                         auto op = op_generator_.next();
 
                         // Generate random scrambled key
-                        auto key_ptr = key_generator_->next(op == operation_t::INSERT ? true : false);
+                        auto key_ptr = key_generator_->next( false, op == operation_t::INSERT ? true : false);
 
                         auto measure_latency = random_bool();
                         if(measure_latency)
@@ -320,7 +323,7 @@ void benchmark_t::run() noexcept
     {
 
         omp_set_nested(true);
-        #pragma omp parallel sections num_threads(2) default(none) shared(finished,local_stats,global_stats,elapsed,values_out,std::cout,stopwatch)
+        #pragma omp parallel sections num_threads(2) default(none) shared(finished,local_stats,global_stats,elapsed,values_out,std::cout,stopwatch,dis)
         {
             #pragma omp section // Monitor & timer thread
             {
@@ -351,6 +354,8 @@ void benchmark_t::run() noexcept
 
                     key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
 
+                    std::default_random_engine engine(time(0) * (tid+1));
+
                     // How many inserts are within this thread ID's range
                     key_generator_->current_id_ = key_generator_->thread_stat[tid];
 
@@ -369,17 +374,22 @@ void benchmark_t::run() noexcept
                         // Generate random operation
                         auto op = op_generator_.next();
 
-                        decltype(key_generator_->next()) key_ptr;
+                        const char* key_ptr;
 
                         // Generate random scrambled key
                         if(op == operation_t::INSERT)
-                            key_ptr = key_generator_->next(tid, key_generator_->current_id_, true);
+                            key_ptr = key_generator_->next(tid, false, true);
                         else if(op == operation_t::READ || op == operation_t::UPDATE)
                             // Generate some unrepeated key for READ & UPDATE (if negative_access == true)
                             // TODO: Make sure to generate a negative access key(dividing next() to two parts)
-                            key_ptr = key_generator_->next(tid, opt_.negative_access ? key_generator_->thread_stat[tid] * 1.2 : key_generator_->thread_stat[tid] - 1, false);
+                        {
+                            if(!opt_.negative_access)
+                                key_ptr = key_generator_->next(tid,false,false);
+                            else
+                                key_ptr = dis(engine) ? key_generator_->next(tid,false,false) : key_generator_->next(tid,true, false);
+                        }
                         else
-                            key_ptr = key_generator_->next(tid, key_generator_->thread_stat[tid]-1, false);
+                            key_ptr = key_generator_->next(tid, false, false);
 
                         auto measure_latency = random_bool();
 

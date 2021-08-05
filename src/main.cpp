@@ -39,6 +39,7 @@ int main(int argc, char** argv)
             ("s,scan_ratio", "Ratio of scan operations", cxxopts::value<float>()->default_value(std::to_string(opt.scan_ratio)))
             ("scan_size", "Number of records to be scanned.", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.scan_size)))
             ("negative_access","Generate keys not in the index",cxxopts::value<bool>()->default_value((opt.negative_access ? "true" : "false")))
+            ("negative_access_rate"," Ratio of negative read/update operations",cxxopts::value<float>()->default_value(std::to_string(opt.negative_access_rate)))
             ("sampling_ms", "Sampling window in milliseconds", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.sampling_ms)))
             ("distribution", "Key distribution to use", cxxopts::value<std::string>()->default_value("UNIFORM"))
             ("skew", "Key distribution skew factor to use", cxxopts::value<float>()->default_value(std::to_string(opt.key_skew)))
@@ -198,11 +199,17 @@ int main(int argc, char** argv)
         if (result.count("time"))
             opt.time = result["time"].as<float>();
 
+        //Parse "negative_access_rate"
+        if(result.count("negative_access_rate"))
+            opt.negative_access_rate = result["negative_access_rate"].as<float>();
+
         //Parse "negative_access"
         if(result.count("negative_access"))
+        {
             opt.negative_access = result["negative_access"].as<bool>();
-
-
+            if(!opt.negative_access)
+                opt.negative_access_rate = 0.0;
+        }
     }
     catch (const cxxopts::OptionException& e)
     {

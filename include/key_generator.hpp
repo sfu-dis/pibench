@@ -58,7 +58,7 @@ public:
      *                    if @false keys are generated randomly.
      * @return const char* pointer to beginning of key.
      */
-    virtual const char* next(bool in_sequence = false) final;
+    virtual const char* next(bool negative_access, bool in_sequence = false) final;
 
     /**
      * @brief Generate next key in time based mode
@@ -73,10 +73,10 @@ public:
      * @param in_sequence if @true, keys are generated in sequence,
      *                    if @false keys are generated randomly.
      * @param tid is thread id, which acted as a prefix of the key
-     * @param counter is used in generating different range of random number in runtime
+     * @param negative_access is used to generate id without range
      * @return const char* pointer to beginning of key.
      */
-    virtual const char* next(uint8_t tid, uint64_t counter, bool in_sequence = false) final;
+    virtual const char* next(uint8_t tid, bool negative_access, bool in_sequence = false) final;
 
     /**
      * @brief Returns total key size (including prefix and tid(time-based mode)).
@@ -126,7 +126,7 @@ protected:
 
 private:
     /// Format generated ID
-    void bits_shift(char *buf_ptr, uint64_t hashed_id);
+    void bits_shift(char *buf_ptr, uint64_t id);
 
     /// Seed used for generating random numbers.
     static thread_local uint32_t seed_;

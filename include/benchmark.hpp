@@ -114,6 +114,7 @@ struct options_t
 
     /// Generate keys which are not in the index structure (used in negative read/update)
     bool negative_access = false;
+    float negative_access_rate = 0.2;
 };
 
 /**

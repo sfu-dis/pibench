@@ -24,36 +24,34 @@ key_generator_t::key_generator_t(size_t N, size_t size, uint16_t thread_num, boo
     memcpy(buf_, prefix_.c_str(), prefix_.size());
 }
 
-const char* key_generator_t::next(bool in_sequence)
+const char* key_generator_t::next(bool negative_access, bool in_sequence)
 {
     char* ptr = &buf_[prefix_.size()];
 
-    uint64_t id = in_sequence ? current_id_++ : next_id();
-    uint64_t hashed_id = utils::multiplicative_hash<uint64_t>(id);
+    uint64_t id = in_sequence ? current_id_++ : (negative_access ? next_id() + current_id_ : next_id());
 
-    bits_shift(ptr,hashed_id);
+    bits_shift(ptr,id);
 
     return buf_;
 }
 
-const char* key_generator_t::next(uint8_t tid, uint64_t counter, bool in_sequence)
+const char* key_generator_t::next(uint8_t tid, bool negative_access, bool in_sequence)
 {
     // 1 Byte after prefix is tid
     char *ptr = &buf_[prefix_.size()];
     memcpy(ptr,&tid,1);
     ptr = &buf_[prefix_.size()+1];
 
+    uint64_t id = in_sequence ? thread_stat[tid]++ : (negative_access ? next_id(thread_stat[tid] - 1) + thread_stat[tid] : next_id(thread_stat[tid] - 1)) ;
 
-    uint64_t id = in_sequence ? thread_stat[tid]++ : next_id(counter);
-    uint64_t hashed_id = utils::multiplicative_hash<uint64_t>(id);
-
-    bits_shift(ptr,hashed_id);
+    bits_shift(ptr,id);
 
     return buf_;
 }
 
-void key_generator_t::bits_shift(char *buf_ptr, uint64_t hashed_id)
+void key_generator_t::bits_shift(char *buf_ptr, uint64_t id)
 {
+    uint64_t hashed_id = utils::multiplicative_hash<uint64_t>(id);
     if (size_ < sizeof(hashed_id))
     {
         // We want key smaller than 8 Bytes, so discard higher bits.
