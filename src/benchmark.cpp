@@ -164,7 +164,7 @@ void benchmark_t::load() noexcept
     for (uint64_t i = 0; i < opt_.num_records; ++i)
     {
         // Generate key in sequence
-        auto key_ptr = opt_.bm_mode == mode_t::Operation ? key_generator_->next(true) : key_generator_->next(tid_generate(i,opt_.num_threads), 0, true);
+        auto key_ptr = opt_.bm_mode == mode_t::Operation ? key_generator_->next(false, true) : key_generator_->next(tid_generate(i,opt_.num_threads), false, true);
 
         // Generate random value
         auto value_ptr = value_generator_.next();
