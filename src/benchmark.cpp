@@ -128,10 +128,12 @@ void benchmark_t::load() noexcept
 {
     if(opt_.skip_load)
     {
+        std::cout << "Load skipped." << std::endl;
         key_generator_->current_id_ = opt_.num_records + 1;
         return;
     }
 
+    std::cout << "Loading started." << std::endl;
     stopwatch_t sw;
     sw.start();
     for (uint64_t i = 0; i < opt_.num_records; ++i)
