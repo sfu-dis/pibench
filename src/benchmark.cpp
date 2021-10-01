@@ -365,12 +365,12 @@ void benchmark_t::run() noexcept
     std::cout << std::fixed << std::setprecision(4);
     std::cout << "\tRun time: " << elapsed << " milliseconds" << std::endl;
 
-    uint64_t total_ops = std::accumulate(local_stats.begin(), local_stats.end(), 0,
+    uint64_t total_ops = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
                                          [](uint64_t sum, const stats_t& curr) {
                                             return sum + curr.operation_count;
                                          });
 
-    uint64_t total_success_ops = std::accumulate(local_stats.begin(), local_stats.end(), 0,
+    uint64_t total_success_ops = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
                                          [](uint64_t sum, const stats_t& curr) {
                                             return sum + curr.success_insert_count
                                                        + curr.success_read_count
