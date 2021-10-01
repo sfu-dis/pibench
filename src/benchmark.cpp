@@ -299,12 +299,13 @@ void benchmark_t::run() noexcept
                     else
                     {
                         auto id = key_generator_->next_id();
-                        if (opt_.bm_mode == mode_t::Operation)
+                        if (opt_.bm_mode == mode_t::Time)
                         {
                             // Scale back to insert amount
-                            id %= (local_stats[tid].insert_count * opt_.num_threads + opt_.num_records);
+                            id %= (local_stats[tid].success_insert_count * opt_.num_threads + opt_.num_records);
                             if (id >= opt_.num_records) {
-                                id = key_generator_->current_id_ + (id - opt_.num_records);
+                                uint64_t ins = id - opt_.num_records;
+                                id = opt_.num_records + inserts_per_thread * (ins / local_stats[tid].success_insert_count) + ins % local_stats[tid].success_insert_count;
                             }
                         }
                         key_ptr = key_generator_->hash_id(id);
