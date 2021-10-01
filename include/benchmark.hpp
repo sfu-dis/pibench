@@ -120,6 +120,15 @@ struct alignas(64) stats_t
     stats_t()
         : operation_count(0)
         , insert_count(0)
+        , success_insert_count(0)
+        , read_count(0)
+        , success_read_count(0)
+        , update_count(0)
+        , success_update_count(0)
+        , remove_count(0)
+        , success_remove_count(0)
+        , scan_count(0)
+        , success_scan_count(0)
     {
     }
 
@@ -129,11 +138,35 @@ struct alignas(64) stats_t
     /// Number of inserts completed
     uint64_t insert_count;
 
+    /// Number of successful inserts
+    uint64_t success_insert_count;
+
+    /// Number of reads completed
+    uint64_t read_count;
+
+    /// Number of successful point reads
+    uint64_t success_read_count;
+
+    /// Number of updates completed
+    uint64_t update_count;
+
+    /// Number of successful point reads
+    uint64_t success_update_count;
+
+    /// Number of remove completed
+    uint64_t remove_count;
+
+    /// Number of successful point reads
+    uint64_t success_remove_count;
+
+    /// Number of scan completed
+    uint64_t scan_count;
+
+    /// Number of successful point reads
+    uint64_t success_scan_count;
+
     /// Vector to store both start and end time of requests.
     std::vector<std::chrono::high_resolution_clock::time_point> times;
-
-    /// Padding to enforce cache-line size and avoid cache-line ping-pong.
-    uint64_t ____padding[6];
 };
 
 class benchmark_t
@@ -170,7 +203,8 @@ public:
 
 private:
     void run_op(operation_t op, const char *key_ptr, 
-                char *value_out, char *values_out, bool measure_latency);
+                char *value_out, char *values_out, bool measure_latency,
+                stats_t &stats);
 
     /// Tree data structure being benchmarked.
     tree_api* tree_;

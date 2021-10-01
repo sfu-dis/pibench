@@ -318,17 +318,11 @@ void benchmark_t::run() noexcept
                         local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                     }
 
-                    run_op(op, key_ptr, value_out, values_out, measure_latency);
+                    run_op(op, key_ptr, value_out, values_out, measure_latency, local_stats[tid]);
 
                     if (measure_latency)
                     {
                         local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
-                    }
-
-                    ++local_stats[tid].operation_count;
-                    if (op == operation_t::INSERT)
-                    {
-                        ++local_stats[tid].insert_count;
                     }
                 };
 
@@ -376,6 +370,16 @@ void benchmark_t::run() noexcept
                                             return sum + curr.operation_count;
                                          });
 
+    uint64_t total_success_ops = std::accumulate(local_stats.begin(), local_stats.end(), 0,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.success_insert_count
+                                                       + curr.success_read_count
+                                                       + curr.success_update_count
+                                                       + curr.success_remove_count
+                                                       + curr.success_scan_count;
+                                         });
+
+
     if (opt_.bm_mode == mode_t::Operation && opt_.num_ops != total_ops)
     {
         std::cout << "Fatal: Total operations specified/performed don't match!";
@@ -383,8 +387,10 @@ void benchmark_t::run() noexcept
     }
 
     std::cout << "\tOperations: " << total_ops << std::endl;
-    std::cout << "\tThroughput: " << total_ops / ((float)elapsed / 1000)
-              << " ops/s" << std::endl;
+    std::cout << "\tThroughput:\n" 
+              << "\t- Completed: " << total_ops / ((float)elapsed / 1000) << " ops/s\n" 
+              << "\t- Succeeded: " << total_success_ops / ((float)elapsed / 1000) << " ops/s" 
+              << std::endl;
 
     if (opt_.enable_pcm)
     {
@@ -430,14 +436,19 @@ void benchmark_t::run() noexcept
 }
 
 void benchmark_t::run_op(operation_t op, const char *key_ptr, 
-                         char *value_out, char *values_out, bool measure_latency)
+                         char *value_out, char *values_out, bool measure_latency,
+                         stats_t &stats)
 {
     switch (op)
     {
     case operation_t::READ:
     {
         auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
-        assert(r);
+        ++stats.read_count;
+        if (r)
+        {
+            ++stats.success_read_count;
+        }
         break;
     }
 
@@ -446,7 +457,11 @@ void benchmark_t::run_op(operation_t op, const char *key_ptr,
         // Generate random value
         auto value_ptr = value_generator_.next();
         auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-        assert(r);
+        ++stats.insert_count;
+        if (r)
+        {
+            ++stats.success_insert_count;
+        }
         break;
     }
 
@@ -455,21 +470,33 @@ void benchmark_t::run_op(operation_t op, const char *key_ptr,
         // Generate random value
         auto value_ptr = value_generator_.next();
         auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-        assert(r);
+        ++stats.update_count;
+        if (r)
+        {
+            ++stats.success_update_count;
+        }
         break;
     }
 
     case operation_t::REMOVE:
     {
         auto r = tree_->remove(key_ptr, key_generator_->size());
-        assert(r);
+        ++stats.remove_count;
+        if (r)
+        {
+            ++stats.success_remove_count;
+        }
         break;
     }
 
     case operation_t::SCAN:
     {
         auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
-        assert(r);
+        ++stats.scan_count;
+        if (r)
+        {
+            ++stats.success_scan_count;
+        }
         break;
     }
 
@@ -478,6 +505,7 @@ void benchmark_t::run_op(operation_t op, const char *key_ptr,
         exit(0);
         break;
     }
+    ++stats.operation_count;
 }
 
 } // namespace PiBench
