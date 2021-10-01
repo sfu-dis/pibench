@@ -241,7 +241,7 @@ void benchmark_t::run() noexcept
             {
                 std::this_thread::sleep_for(sampling_window);
                 stats_t s;
-                s.operation_count = std::accumulate(local_stats.begin(), local_stats.end(), 0,
+                s.operation_count = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
                                                     [](uint64_t sum, const stats_t& curr) {
                                                         return sum + curr.operation_count;
                                                     });
