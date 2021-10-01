@@ -293,7 +293,24 @@ void benchmark_t::run() noexcept
                     auto op = op_generator_.next();
 
                     // Generate random scrambled key
-                    auto key_ptr = key_generator_->next(op == operation_t::INSERT ? true : false);
+                    const char *key_ptr = nullptr;
+                    if (op == operation_t::INSERT)
+                    {
+                        key_ptr = key_generator_->next(true);
+                    }
+                    else
+                    {
+                        auto id = key_generator_->next_id();
+                        if (opt_.bm_mode == mode_t::Operation)
+                        {
+                            // Scale back to insert amount
+                            id %= (local_stats[tid].insert_count * opt_.num_threads + opt_.num_records);
+                            if (id >= opt_.num_records) {
+                                id = key_generator_->current_id_ + (id - opt_.num_records);
+                            }
+                        }
+                        key_ptr = key_generator_->hash_id(id);
+                    }
 
                     auto measure_latency = random_bool();
                     if (measure_latency)
@@ -307,7 +324,12 @@ void benchmark_t::run() noexcept
                     {
                         local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                     }
+
                     ++local_stats[tid].operation_count;
+                    if (op == operation_t::INSERT)
+                    {
+                        ++local_stats[tid].insert_count;
+                    }
                 };
 
                 if (opt_.bm_mode == mode_t::Operation)

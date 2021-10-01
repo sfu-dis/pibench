@@ -96,8 +96,9 @@ public:
 
     const char* hash_id(uint64_t id);
 
-protected:
     virtual uint64_t next_id() = 0;
+
+protected:
 
     /// Engine used for generating random numbers.
     static thread_local std::default_random_engine generator_;

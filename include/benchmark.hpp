@@ -119,17 +119,21 @@ struct alignas(64) stats_t
 {
     stats_t()
         : operation_count(0)
+        , insert_count(0)
     {
     }
 
     /// Number of operations completed.
     uint64_t operation_count;
 
+    /// Number of inserts completed
+    uint64_t insert_count;
+
     /// Vector to store both start and end time of requests.
     std::vector<std::chrono::high_resolution_clock::time_point> times;
 
     /// Padding to enforce cache-line size and avoid cache-line ping-pong.
-    uint64_t ____padding[7];
+    uint64_t ____padding[6];
 };
 
 class benchmark_t
