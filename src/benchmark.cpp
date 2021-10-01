@@ -159,7 +159,9 @@ void benchmark_t::load() noexcept
 
     }
 
-    std::cout << "Loading finished; now verify keys are inserted." << std::endl;
+    auto elapsed = sw.elapsed<std::chrono::milliseconds>();
+
+    std::cout << "Loading finished in " << elapsed << " milliseconds" << std::endl;
 
     // Verify all keys can be found
     {
@@ -183,11 +185,7 @@ void benchmark_t::load() noexcept
         }
     }
 
-    auto elapsed = sw.elapsed<std::chrono::milliseconds>();
-
-    std::cout << "Overview:"
-              << "\n"
-              << "\tLoad time: " << elapsed << " milliseconds" << std::endl;
+    std::cout << "Load verified; benchmark started." << std::endl;
 }
 
 void benchmark_t::run() noexcept
@@ -229,7 +227,7 @@ void benchmark_t::run() noexcept
         *before_sstate = getSystemCounterState();
     }
 
-    float elapsed = 0.0;
+    double elapsed = 0.0;
     stopwatch_t sw;
     omp_set_nested(true);
     #pragma omp parallel sections num_threads(2)
@@ -379,6 +377,56 @@ void benchmark_t::run() noexcept
                                                        + curr.success_scan_count;
                                          });
 
+    uint64_t total_insert = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.insert_count;
+                                         });
+
+    uint64_t total_success_insert = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                    [](uint64_t sum, const stats_t& curr) {
+                                                       return sum + curr.success_insert_count;
+                                                    });
+
+    uint64_t total_read = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.read_count;
+                                         });
+
+    uint64_t total_success_read = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                    [](uint64_t sum, const stats_t& curr) {
+                                                       return sum + curr.success_read_count;
+                                                    });
+
+    uint64_t total_update = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.update_count;
+                                         });
+
+    uint64_t total_success_update = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                    [](uint64_t sum, const stats_t& curr) {
+                                                       return sum + curr.success_update_count;
+                                                    });
+
+    uint64_t total_remove = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.remove_count;
+                                         });
+
+    uint64_t total_success_remove = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                    [](uint64_t sum, const stats_t& curr) {
+                                                       return sum + curr.success_remove_count;
+                                                    });
+
+    uint64_t total_scan = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.scan_count;
+                                         });
+
+    uint64_t total_success_scan = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                    [](uint64_t sum, const stats_t& curr) {
+                                                       return sum + curr.success_scan_count;
+                                                    });
+
 
     if (opt_.bm_mode == mode_t::Operation && opt_.num_ops != total_ops)
     {
@@ -386,10 +434,22 @@ void benchmark_t::run() noexcept
         exit(1);
     }
 
+    std::cout << "Results:\n";
     std::cout << "\tOperations: " << total_ops << std::endl;
     std::cout << "\tThroughput:\n" 
-              << "\t- Completed: " << total_ops / ((float)elapsed / 1000) << " ops/s\n" 
-              << "\t- Succeeded: " << total_success_ops / ((float)elapsed / 1000) << " ops/s" 
+              << "\t- Completed: " << total_ops / ((double)elapsed / 1000) << " ops/s\n" 
+              << "\t- Succeeded: " << total_success_ops / ((double)elapsed / 1000) << " ops/s\n" 
+              << "\tBreakdown:\n"
+              << "\t- Insert completed: " << total_insert / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Insert succeeded: " << total_success_insert / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Read completed: " << total_read / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Read succeeded: " << total_success_read / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Update completed: " << total_update / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Update succeeded: " << total_success_update / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Remove completed: " << total_remove / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Remove succeeded: " << total_success_remove/ ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Scan completed: " << total_scan / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Scan succeeded: " << total_success_scan/ ((double)elapsed / 1000) << " ops/s"
               << std::endl;
 
     if (opt_.enable_pcm)
