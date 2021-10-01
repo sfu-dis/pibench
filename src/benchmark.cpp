@@ -136,17 +136,28 @@ void benchmark_t::load() noexcept
     std::cout << "Loading started." << std::endl;
     stopwatch_t sw;
     sw.start();
-    for (uint64_t i = 0; i < opt_.num_records; ++i)
+
     {
-        // Generate key in sequence
-        auto key_ptr = key_generator_->next(true);
+        #pragma omp parallel num_threads(opt_.num_threads)
+        {
+            // Initialize insert id for each thread
+            key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
 
-        // Generate random value
-        auto value_ptr = value_generator_.next();
+            #pragma omp for schedule(static)
+            for (uint64_t i = 0; i < opt_.num_records; ++i)
+            {
+                // Generate key in sequence
+                auto key_ptr = key_generator_->next(true);
 
-        auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-        assert(r);
+                // Generate random value
+                auto value_ptr = value_generator_.next();
+
+                auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+                assert(r);
+            }
+        }
     }
+
     auto elapsed = sw.elapsed<std::chrono::milliseconds>();
 
     std::cout << "Overview:"
