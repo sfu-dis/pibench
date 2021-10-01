@@ -156,6 +156,31 @@ void benchmark_t::load() noexcept
                 assert(r);
             }
         }
+
+    }
+
+    std::cout << "Loading finished; now verify keys are inserted." << std::endl;
+
+    // Verify all keys can be found
+    {
+        #pragma omp parallel num_threads(opt_.num_threads)
+        {
+            // Initialize insert id for each thread
+            auto id = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+
+            #pragma omp for schedule(static)
+            for (uint64_t i = 0; i < opt_.num_records; ++i)
+            {
+                // Generate key in sequence
+                auto key_ptr = key_generator_->hash_id(id++);
+
+                static thread_local char value_out[value_generator_t::VALUE_MAX];
+                bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
+                if (!found) {
+                    exit(1);
+                }
+            }
+        }
     }
 
     auto elapsed = sw.elapsed<std::chrono::milliseconds>();

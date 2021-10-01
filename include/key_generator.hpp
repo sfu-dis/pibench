@@ -94,6 +94,8 @@ public:
 
     static thread_local uint64_t current_id_;
 
+    const char* hash_id(uint64_t id);
+
 protected:
     virtual uint64_t next_id() = 0;
 
