@@ -47,6 +47,8 @@ int main(int argc, char** argv)
             ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value(std::to_string(tree_opt.pool_size)))
             ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value((opt.skip_load ? "true" : "false")))
             ("latency_sampling", "Sample latency of requests", cxxopts::value<float>()->default_value(std::to_string(opt.latency_sampling)))
+            ("m,mode","Benchmark mode",cxxopts::value<std::string>()->default_value("operation"))
+            ("seconds","Time (seconds) PiBench run in time-based mode",cxxopts::value<float>()->default_value(std::to_string(opt.seconds)))
             ("help", "Print help")
         ;
 
@@ -88,10 +90,6 @@ int main(int argc, char** argv)
         // Parse "num_records"
         if (result.count("records"))
             opt.num_records = result["records"].as<uint64_t>();
-
-        // Parse "num_operations"
-        if (result.count("operations"))
-            opt.num_ops = result["operations"].as<uint64_t>();
 
         // Parse "num_threads"
         if (result.count("threads"))
@@ -175,6 +173,36 @@ int main(int argc, char** argv)
         if (result.count("pool_size"))
             tree_opt.pool_size = result["pool_size"].as<uint64_t>();
 
+         // Parse "mode"
+        if (result.count("mode"))
+        {
+            std::string mode = result["mode"].as<std::string>();
+            std::transform(mode.begin(),mode.end(),mode.begin(),::tolower);
+            if(mode.compare("operation") == 0)
+            {
+                opt.bm_mode = PiBench::mode_t::Operation;
+
+                // Parse "num_operations"
+                if (result.count("operations"))
+                    opt.num_ops = result["operations"].as<uint64_t>();
+            }
+            else if(mode.compare("time") == 0)
+            {
+                opt.bm_mode = PiBench::mode_t::Time;
+
+                std::cout << "Time-based benchmark selected - changing key space to +inf" << std::endl;
+                opt.num_ops = std::numeric_limits<int64_t>::max();
+            }
+            else
+            {
+                std::cout << "Mode must be one of [operation | time]" << std::endl;
+                exit(1);
+            }
+        }
+
+        // Parse "seconds"
+        if (result.count("seconds"))
+            opt.seconds = result["seconds"].as<float>();
     }
     catch (const cxxopts::OptionException& e)
     {

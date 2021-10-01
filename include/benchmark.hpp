@@ -19,6 +19,15 @@ namespace PiBench
 void print_environment();
 
 /**
+ * @brief Benchmark mode
+ */
+enum class mode_t : uint8_t
+{
+    Operation = 0,
+    Time = 1,
+};
+
+/**
  * @brief Supported random number distributions.
  *
  */
@@ -94,6 +103,12 @@ struct options_t
 
     /// Ratio of requests to sample latency from (between 0.0 and 1.0).
     float latency_sampling = 0.0;
+
+    /// Experiment duration (seconds) for time-based benchmark
+    uint32_t seconds = 20;
+
+    /// Experiment mode
+    mode_t bm_mode = mode_t::Operation;
 };
 
 /**
@@ -150,6 +165,9 @@ public:
     static constexpr size_t MAX_SCAN = 1000;
 
 private:
+    void run_op(operation_t op, const char *key_ptr, 
+                char *value_out, char *values_out, bool measure_latency);
+
     /// Tree data structure being benchmarked.
     tree_api* tree_;
 

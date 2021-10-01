@@ -164,8 +164,16 @@ void benchmark_t::run() noexcept
     char* values_out;
 
     std::vector<stats_t> local_stats(opt_.num_threads);
-    for(auto& lc : local_stats) {
-        lc.times.resize(std::ceil(opt_.num_ops/opt_.num_threads)*2);
+    for(auto& lc : local_stats)
+    {
+        if (opt_.bm_mode == mode_t::Operation)
+        {
+            lc.times.resize(std::ceil(opt_.num_ops/opt_.num_threads)*2);
+        }
+        else
+        {
+            lc.times.resize(1000000);
+        }
         lc.times.resize(0);
     }
 
@@ -193,7 +201,7 @@ void benchmark_t::run() noexcept
         #pragma omp section // Monitor thread
         {
             std::chrono::milliseconds sampling_window(opt_.sampling_ms);
-            while (!finished)
+            auto sample_stats = [&]()
             {
                 std::this_thread::sleep_for(sampling_window);
                 stats_t s;
@@ -202,6 +210,23 @@ void benchmark_t::run() noexcept
                                                         return sum + curr.operation_count;
                                                     });
                 global_stats.push_back(std::move(s));
+            };
+
+            if (opt_.bm_mode == mode_t::Operation)
+            {
+                while (!finished)
+                {
+                    sample_stats();
+                }
+            }
+            else
+            {
+                uint32_t slept = 0;
+                do {
+                    sample_stats();
+                }
+                while (++slept < opt_.seconds);
+                finished = true;
             }
         }
 
@@ -226,8 +251,7 @@ void benchmark_t::run() noexcept
                     sw.start();
                 }
 
-                #pragma omp for schedule(static)
-                for (uint64_t i = 0; i < opt_.num_ops; ++i)
+                auto execute_op = [&]()
                 {
                     // Generate random operation
                     auto op = op_generator_.next();
@@ -236,63 +260,36 @@ void benchmark_t::run() noexcept
                     auto key_ptr = key_generator_->next(op == operation_t::INSERT ? true : false);
 
                     auto measure_latency = random_bool();
-                    if(measure_latency)
+                    if (measure_latency)
                     {
                         local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                     }
 
-                    switch (op)
-                    {
-                    case operation_t::READ:
-                    {
-                        auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
-                        assert(r);
-                        break;
-                    }
+                    run_op(op, key_ptr, value_out, values_out, measure_latency);
 
-                    case operation_t::INSERT:
-                    {
-                        // Generate random value
-                        auto value_ptr = value_generator_.next();
-                        auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                        assert(r);
-                        break;
-                    }
-
-                    case operation_t::UPDATE:
-                    {
-                        // Generate random value
-                        auto value_ptr = value_generator_.next();
-                        auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                        assert(r);
-                        break;
-                    }
-
-                    case operation_t::REMOVE:
-                    {
-                        auto r = tree_->remove(key_ptr, key_generator_->size());
-                        assert(r);
-                        break;
-                    }
-
-                    case operation_t::SCAN:
-                    {
-                        auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
-                        assert(r);
-                        break;
-                    }
-
-                    default:
-                        std::cout << "Error: unknown operation!" << std::endl;
-                        exit(0);
-                        break;
-                    }
-
-                    if(measure_latency)
+                    if (measure_latency)
                     {
                         local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                     }
                     ++local_stats[tid].operation_count;
+                };
+
+                if (opt_.bm_mode == mode_t::Operation)
+                {
+                    #pragma omp for schedule(static)
+                    for (uint64_t i = 0; i < opt_.num_ops; ++i)
+                    {
+                        execute_op();
+                    }
+                }
+                else
+                {
+                    uint32_t slept = 0;
+                    do
+                    {
+                        execute_op();
+                    }
+                    while (!finished);
                 }
 
                 // Get elapsed time and signal monitor thread to finish.
@@ -315,7 +312,20 @@ void benchmark_t::run() noexcept
 
     std::cout << std::fixed << std::setprecision(4);
     std::cout << "\tRun time: " << elapsed << " milliseconds" << std::endl;
-    std::cout << "\tThroughput: " << opt_.num_ops / ((float)elapsed / 1000)
+
+    uint64_t total_ops = std::accumulate(local_stats.begin(), local_stats.end(), 0,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.operation_count;
+                                         });
+
+    if (opt_.bm_mode == mode_t::Operation && opt_.num_ops != total_ops)
+    {
+        std::cout << "Fatal: Total operations specified/performed don't match!";
+        exit(1);
+    }
+
+    std::cout << "\tOperations: " << total_ops << std::endl;
+    std::cout << "\tThroughput: " << total_ops / ((float)elapsed / 1000)
               << " ops/s" << std::endl;
 
     if (opt_.enable_pcm)
@@ -360,6 +370,58 @@ void benchmark_t::run() noexcept
                   << "\tmax: " << global_latencies[observed-1] << std::endl;
     }
 }
+
+void benchmark_t::run_op(operation_t op, const char *key_ptr, 
+                         char *value_out, char *values_out, bool measure_latency)
+{
+    switch (op)
+    {
+    case operation_t::READ:
+    {
+        auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
+        assert(r);
+        break;
+    }
+
+    case operation_t::INSERT:
+    {
+        // Generate random value
+        auto value_ptr = value_generator_.next();
+        auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+        assert(r);
+        break;
+    }
+
+    case operation_t::UPDATE:
+    {
+        // Generate random value
+        auto value_ptr = value_generator_.next();
+        auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+        assert(r);
+        break;
+    }
+
+    case operation_t::REMOVE:
+    {
+        auto r = tree_->remove(key_ptr, key_generator_->size());
+        assert(r);
+        break;
+    }
+
+    case operation_t::SCAN:
+    {
+        auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
+        assert(r);
+        break;
+    }
+
+    default:
+        std::cout << "Error: unknown operation!" << std::endl;
+        exit(0);
+        break;
+    }
+}
+
 } // namespace PiBench
 
 namespace std
@@ -388,8 +450,8 @@ std::ostream& operator<<(std::ostream& os, const PiBench::options_t& opt)
        << "\n"
        << "\tTarget: " << opt.library_file << "\n"
        << "\t# Records: " << opt.num_records << "\n"
-       << "\t# Operations: " << opt.num_ops << "\n"
        << "\t# Threads: " << opt.num_threads << "\n"
+       << (opt.bm_mode == PiBench::mode_t::Operation ? "\t# Operations: " : "\tDuration (s): ") << (opt.bm_mode == PiBench::mode_t::Operation ? opt.num_ops : opt.seconds) << "\n"
        << "\tSampling: " << opt.sampling_ms << " ms\n"
        << "\tLatency: " << opt.latency_sampling << "\n"
        << "\tKey prefix: " << opt.key_prefix << "\n"
