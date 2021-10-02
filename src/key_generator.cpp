@@ -20,9 +20,23 @@ key_generator_t::key_generator_t(size_t N, size_t size, const std::string& prefi
 
 const char* key_generator_t::next(bool in_sequence)
 {
+    uint64_t id = -1;
+    if (in_sequence)
+    {
+      id = current_id_++;
+    }
+    else
+    {
+      //if opt_.bm_mode == mode_t::Operation  
+      id = next_id();
+    }
+    return hash_id(id);
+}
+
+const char* key_generator_t::hash_id(uint64_t id)
+{
     char* ptr = &buf_[prefix_.size()];
 
-    uint64_t id = in_sequence ? current_id_++ : next_id();
     uint64_t hashed_id = utils::multiplicative_hash<uint64_t>(id);
 
     if (size_ < sizeof(hashed_id))

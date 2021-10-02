@@ -94,8 +94,11 @@ public:
 
     static thread_local uint64_t current_id_;
 
-protected:
+    const char* hash_id(uint64_t id);
+
     virtual uint64_t next_id() = 0;
+
+protected:
 
     /// Engine used for generating random numbers.
     static thread_local std::default_random_engine generator_;

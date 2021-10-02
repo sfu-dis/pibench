@@ -128,28 +128,64 @@ void benchmark_t::load() noexcept
 {
     if(opt_.skip_load)
     {
+        std::cout << "Load skipped." << std::endl;
         key_generator_->current_id_ = opt_.num_records + 1;
         return;
     }
 
+    std::cout << "Loading started." << std::endl;
     stopwatch_t sw;
     sw.start();
-    for (uint64_t i = 0; i < opt_.num_records; ++i)
+
     {
-        // Generate key in sequence
-        auto key_ptr = key_generator_->next(true);
+        #pragma omp parallel num_threads(opt_.num_threads)
+        {
+            // Initialize insert id for each thread
+            key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
 
-        // Generate random value
-        auto value_ptr = value_generator_.next();
+            #pragma omp for schedule(static)
+            for (uint64_t i = 0; i < opt_.num_records; ++i)
+            {
+                // Generate key in sequence
+                auto key_ptr = key_generator_->next(true);
 
-        auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-        assert(r);
+                // Generate random value
+                auto value_ptr = value_generator_.next();
+
+                auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+                assert(r);
+            }
+        }
+
     }
+
     auto elapsed = sw.elapsed<std::chrono::milliseconds>();
 
-    std::cout << "Overview:"
-              << "\n"
-              << "\tLoad time: " << elapsed << " milliseconds" << std::endl;
+    std::cout << "Loading finished in " << elapsed << " milliseconds" << std::endl;
+
+    // Verify all keys can be found
+    {
+        #pragma omp parallel num_threads(opt_.num_threads)
+        {
+            // Initialize insert id for each thread
+            auto id = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+
+            #pragma omp for schedule(static)
+            for (uint64_t i = 0; i < opt_.num_records; ++i)
+            {
+                // Generate key in sequence
+                auto key_ptr = key_generator_->hash_id(id++);
+
+                static thread_local char value_out[value_generator_t::VALUE_MAX];
+                bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
+                if (!found) {
+                    exit(1);
+                }
+            }
+        }
+    }
+
+    std::cout << "Load verified; benchmark started." << std::endl;
 }
 
 void benchmark_t::run() noexcept
@@ -162,8 +198,16 @@ void benchmark_t::run() noexcept
     char* values_out;
 
     std::vector<stats_t> local_stats(opt_.num_threads);
-    for(auto& lc : local_stats) {
-        lc.times.resize(std::ceil(opt_.num_ops/opt_.num_threads)*2);
+    for(auto& lc : local_stats)
+    {
+        if (opt_.bm_mode == mode_t::Operation)
+        {
+            lc.times.resize(std::ceil(opt_.num_ops/opt_.num_threads)*2);
+        }
+        else
+        {
+            lc.times.resize(1000000);
+        }
         lc.times.resize(0);
     }
 
@@ -183,7 +227,7 @@ void benchmark_t::run() noexcept
         *before_sstate = getSystemCounterState();
     }
 
-    float elapsed = 0.0;
+    double elapsed = 0.0;
     stopwatch_t sw;
     omp_set_nested(true);
     #pragma omp parallel sections num_threads(2)
@@ -191,7 +235,7 @@ void benchmark_t::run() noexcept
         #pragma omp section // Monitor thread
         {
             std::chrono::milliseconds sampling_window(opt_.sampling_ms);
-            while (!finished)
+            auto sample_stats = [&]()
             {
                 std::this_thread::sleep_for(sampling_window);
                 stats_t s;
@@ -200,6 +244,23 @@ void benchmark_t::run() noexcept
                                                         return sum + curr.operation_count;
                                                     });
                 global_stats.push_back(std::move(s));
+            };
+
+            if (opt_.bm_mode == mode_t::Operation)
+            {
+                while (!finished)
+                {
+                    sample_stats();
+                }
+            }
+            else
+            {
+                uint32_t slept = 0;
+                do {
+                    sample_stats();
+                }
+                while (++slept < opt_.seconds);
+                finished = true;
             }
         }
 
@@ -224,73 +285,62 @@ void benchmark_t::run() noexcept
                     sw.start();
                 }
 
-                #pragma omp for schedule(static)
-                for (uint64_t i = 0; i < opt_.num_ops; ++i)
+                auto execute_op = [&]()
                 {
                     // Generate random operation
                     auto op = op_generator_.next();
 
                     // Generate random scrambled key
-                    auto key_ptr = key_generator_->next(op == operation_t::INSERT ? true : false);
+                    const char *key_ptr = nullptr;
+                    if (op == operation_t::INSERT)
+                    {
+                        key_ptr = key_generator_->next(true);
+                    }
+                    else
+                    {
+                        auto id = key_generator_->next_id();
+                        if (opt_.bm_mode == mode_t::Time)
+                        {
+                            // Scale back to insert amount
+                            id %= (local_stats[tid].success_insert_count * opt_.num_threads + opt_.num_records);
+                            if (id >= opt_.num_records) {
+                                uint64_t ins = id - opt_.num_records;
+                                id = opt_.num_records + inserts_per_thread * (ins / local_stats[tid].success_insert_count) + ins % local_stats[tid].success_insert_count;
+                            }
+                        }
+                        key_ptr = key_generator_->hash_id(id);
+                    }
 
                     auto measure_latency = random_bool();
-                    if(measure_latency)
+                    if (measure_latency)
                     {
                         local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                     }
 
-                    switch (op)
-                    {
-                    case operation_t::READ:
-                    {
-                        auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
-                        assert(r);
-                        break;
-                    }
+                    run_op(op, key_ptr, value_out, values_out, measure_latency, local_stats[tid]);
 
-                    case operation_t::INSERT:
-                    {
-                        // Generate random value
-                        auto value_ptr = value_generator_.next();
-                        auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                        assert(r);
-                        break;
-                    }
-
-                    case operation_t::UPDATE:
-                    {
-                        // Generate random value
-                        auto value_ptr = value_generator_.next();
-                        auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                        assert(r);
-                        break;
-                    }
-
-                    case operation_t::REMOVE:
-                    {
-                        auto r = tree_->remove(key_ptr, key_generator_->size());
-                        assert(r);
-                        break;
-                    }
-
-                    case operation_t::SCAN:
-                    {
-                        auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
-                        assert(r);
-                        break;
-                    }
-
-                    default:
-                        std::cout << "Error: unknown operation!" << std::endl;
-                        exit(0);
-                        break;
-                    }
-
-                    if(measure_latency)
+                    if (measure_latency)
                     {
                         local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                     }
-                    ++local_stats[tid].operation_count;
+                };
+
+                if (opt_.bm_mode == mode_t::Operation)
+                {
+                    #pragma omp for schedule(static)
+                    for (uint64_t i = 0; i < opt_.num_ops; ++i)
+                    {
+                        execute_op();
+                    }
+                }
+                else
+                {
+                    uint32_t slept = 0;
+                    do
+                    {
+                        execute_op();
+                    }
+                    while (!finished);
                 }
 
                 // Get elapsed time and signal monitor thread to finish.
@@ -313,8 +363,95 @@ void benchmark_t::run() noexcept
 
     std::cout << std::fixed << std::setprecision(4);
     std::cout << "\tRun time: " << elapsed << " milliseconds" << std::endl;
-    std::cout << "\tThroughput: " << opt_.num_ops / ((float)elapsed / 1000)
-              << " ops/s" << std::endl;
+
+    uint64_t total_ops = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.operation_count;
+                                         });
+
+    uint64_t total_success_ops = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.success_insert_count
+                                                       + curr.success_read_count
+                                                       + curr.success_update_count
+                                                       + curr.success_remove_count
+                                                       + curr.success_scan_count;
+                                         });
+
+    uint64_t total_insert = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.insert_count;
+                                         });
+
+    uint64_t total_success_insert = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                    [](uint64_t sum, const stats_t& curr) {
+                                                       return sum + curr.success_insert_count;
+                                                    });
+
+    uint64_t total_read = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.read_count;
+                                         });
+
+    uint64_t total_success_read = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                    [](uint64_t sum, const stats_t& curr) {
+                                                       return sum + curr.success_read_count;
+                                                    });
+
+    uint64_t total_update = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.update_count;
+                                         });
+
+    uint64_t total_success_update = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                    [](uint64_t sum, const stats_t& curr) {
+                                                       return sum + curr.success_update_count;
+                                                    });
+
+    uint64_t total_remove = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.remove_count;
+                                         });
+
+    uint64_t total_success_remove = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                    [](uint64_t sum, const stats_t& curr) {
+                                                       return sum + curr.success_remove_count;
+                                                    });
+
+    uint64_t total_scan = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                         [](uint64_t sum, const stats_t& curr) {
+                                            return sum + curr.scan_count;
+                                         });
+
+    uint64_t total_success_scan = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                    [](uint64_t sum, const stats_t& curr) {
+                                                       return sum + curr.success_scan_count;
+                                                    });
+
+
+    if (opt_.bm_mode == mode_t::Operation && opt_.num_ops != total_ops)
+    {
+        std::cout << "Fatal: Total operations specified/performed don't match!";
+        exit(1);
+    }
+
+    std::cout << "Results:\n";
+    std::cout << "\tOperations: " << total_ops << std::endl;
+    std::cout << "\tThroughput:\n" 
+              << "\t- Completed: " << total_ops / ((double)elapsed / 1000) << " ops/s\n" 
+              << "\t- Succeeded: " << total_success_ops / ((double)elapsed / 1000) << " ops/s\n" 
+              << "\tBreakdown:\n"
+              << "\t- Insert completed: " << total_insert / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Insert succeeded: " << total_success_insert / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Read completed: " << total_read / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Read succeeded: " << total_success_read / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Update completed: " << total_update / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Update succeeded: " << total_success_update / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Remove completed: " << total_remove / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Remove succeeded: " << total_success_remove/ ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Scan completed: " << total_scan / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Scan succeeded: " << total_success_scan/ ((double)elapsed / 1000) << " ops/s"
+              << std::endl;
 
     if (opt_.enable_pcm)
     {
@@ -358,6 +495,80 @@ void benchmark_t::run() noexcept
                   << "\tmax: " << global_latencies[observed-1] << std::endl;
     }
 }
+
+void benchmark_t::run_op(operation_t op, const char *key_ptr, 
+                         char *value_out, char *values_out, bool measure_latency,
+                         stats_t &stats)
+{
+    switch (op)
+    {
+    case operation_t::READ:
+    {
+        auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
+        ++stats.read_count;
+        if (r)
+        {
+            ++stats.success_read_count;
+        }
+        break;
+    }
+
+    case operation_t::INSERT:
+    {
+        // Generate random value
+        auto value_ptr = value_generator_.next();
+        auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+        ++stats.insert_count;
+        if (r)
+        {
+            ++stats.success_insert_count;
+        }
+        break;
+    }
+
+    case operation_t::UPDATE:
+    {
+        // Generate random value
+        auto value_ptr = value_generator_.next();
+        auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+        ++stats.update_count;
+        if (r)
+        {
+            ++stats.success_update_count;
+        }
+        break;
+    }
+
+    case operation_t::REMOVE:
+    {
+        auto r = tree_->remove(key_ptr, key_generator_->size());
+        ++stats.remove_count;
+        if (r)
+        {
+            ++stats.success_remove_count;
+        }
+        break;
+    }
+
+    case operation_t::SCAN:
+    {
+        auto r = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
+        ++stats.scan_count;
+        if (r)
+        {
+            ++stats.success_scan_count;
+        }
+        break;
+    }
+
+    default:
+        std::cout << "Error: unknown operation!" << std::endl;
+        exit(0);
+        break;
+    }
+    ++stats.operation_count;
+}
+
 } // namespace PiBench
 
 namespace std
@@ -386,8 +597,8 @@ std::ostream& operator<<(std::ostream& os, const PiBench::options_t& opt)
        << "\n"
        << "\tTarget: " << opt.library_file << "\n"
        << "\t# Records: " << opt.num_records << "\n"
-       << "\t# Operations: " << opt.num_ops << "\n"
        << "\t# Threads: " << opt.num_threads << "\n"
+       << (opt.bm_mode == PiBench::mode_t::Operation ? "\t# Operations: " : "\tDuration (s): ") << (opt.bm_mode == PiBench::mode_t::Operation ? opt.num_ops : opt.seconds) << "\n"
        << "\tSampling: " << opt.sampling_ms << " ms\n"
        << "\tLatency: " << opt.latency_sampling << "\n"
        << "\tKey prefix: " << opt.key_prefix << "\n"
