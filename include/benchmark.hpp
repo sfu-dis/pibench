@@ -203,7 +203,7 @@ public:
 
 private:
     void run_op(operation_t op, const char *key_ptr, 
-                char *value_out, char *values_out, bool measure_latency,
+                char *value_out, char *values_out,
                 stats_t &stats);
 
     /// Tree data structure being benchmarked.
@@ -223,6 +223,9 @@ private:
 
     /// Intel PCM handler.
     PCM* pcm_;
+
+    // Array storing the start ID for each thread
+    uint64_t * cur_id_start;
 };
 } // namespace PiBench
 

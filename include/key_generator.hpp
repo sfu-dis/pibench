@@ -98,6 +98,9 @@ public:
 
     virtual uint64_t next_id() = 0;
 
+    // Generate an ID within the range [a,b]
+    virtual uint64_t next_id(uint64_t a, uint64_t b) = 0;
+
 protected:
 
     /// Engine used for generating random numbers.
@@ -135,6 +138,12 @@ protected:
         return dist_(generator_);
     }
 
+    virtual uint64_t next_id(uint64_t a, uint64_t b) override
+    {
+        std::uniform_int_distribution<uint64_t> dis(a,b);
+        return dis(generator_);
+    }
+
 private:
     std::uniform_int_distribution<uint64_t> dist_;
 };
@@ -153,6 +162,12 @@ public:
         return dist_(generator_);
     }
 
+    virtual uint64_t next_id(uint64_t a, uint64_t b) override
+    {
+        selfsimilar_int_distribution<uint64_t> dis(a,b);
+        return dis(generator_);
+    }
+
 private:
     selfsimilar_int_distribution<uint64_t> dist_;
 };
@@ -169,6 +184,12 @@ public:
     virtual uint64_t next_id() override
     {
         return dist_(generator_);
+    }
+
+    virtual uint64_t next_id(uint64_t a, uint64_t b) override
+    {
+        zipfian_int_distribution<uint64_t> dis(a,b);
+        return dis(generator_);
     }
 
 private:
