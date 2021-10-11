@@ -104,13 +104,12 @@ Usage:
   -d, --remove_ratio arg  Ratio of remove operations (default: 0)
   -s, --scan_ratio arg    Ratio of scan operations (default: 0)
       --scan_size arg     Number of records to be scanned. (default: 100)
-      --negative_access(T/F)  Flag for generating unrepeated keys (default:false)
       --sampling_ms arg   Sampling window in milliseconds (default: 1000)
       --distribution arg  Key distribution to use (default: UNIFORM)
       --skew arg          Key distribution skew factor to use (default: 0.2)
       --seed arg          Seed for random generators (default: 1729)
-      --mode arg          Time based or Operation based mode (default:operation)
-      --time arg          Benchmark run time under time based mode
+      --mode arg          Time based or operation based mode (default:operation)
+      --seconds arg       Benchmark duration in seconds under the time-based mode
       --pcm               Turn on Intel PCM (default: true)
       --pool_path arg     Path to persistent pool (default: )
       --pool_size arg     Size of persistent pool (in Bytes) (default: 0)
