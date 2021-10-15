@@ -199,6 +199,15 @@ int main(int argc, char** argv)
                 exit(1);
             }
         }
+        else
+        {
+            // Default mode is operation
+            opt.bm_mode = PiBench::mode_t::Operation;
+
+            // Parse "num_operations"
+            if (result.count("operations"))
+                opt.num_ops = result["operations"].as<uint64_t>();
+        }
 
         // Parse "seconds"
         if (result.count("seconds"))
