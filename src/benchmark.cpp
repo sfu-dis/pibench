@@ -255,11 +255,12 @@ void benchmark_t::run() noexcept
             }
             else
             {
+                uint32_t iterations = opt_.seconds * 1000 / opt_.sampling_ms;
                 uint32_t slept = 0;
                 do {
                     sample_stats();
                 }
-                while (++slept < opt_.seconds);
+                while (++slept < iterations);
                 finished = true;
             }
         }
