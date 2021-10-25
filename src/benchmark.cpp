@@ -97,6 +97,7 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
         }
     }
 
+    // key_space_sz is not needed since the distribution is not needed
     size_t key_space_sz = (opt_.num_records + (opt_.num_ops * opt_.insert_ratio)) / opt_.num_threads;
     switch (opt_.key_distribution)
     {
@@ -117,12 +118,9 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
         exit(0);
     }
 
-    // Initializing cur_id_start
+    // Initializing cur_id_start and cur_id_table
     // Suppose there are M threads(0 - M-1). thread N starts from N * uint64max / M
-    cur_id_start = new uint64_t[opt_.num_threads];
-    for(int i = 0; i < opt.num_threads; ++i){
-        cur_id_start[i] = i * (std::numeric_limits<uint64_t>::max() / opt.num_threads) + 1;
-    }
+    key_generator_->cur_id_initialize(opt_.num_threads);
 }
 
 benchmark_t::~benchmark_t()
@@ -136,7 +134,10 @@ void benchmark_t::load() noexcept
     if(opt_.skip_load)
     {
         std::cout << "Load skipped." << std::endl;
-        key_generator_->current_id_ = opt_.num_records + 1;
+        //key_generator_->current_id_ = opt_.num_records + 1;
+        for(int i = 0; i< opt_.num_threads; ++i){
+            key_generator_->cur_id_table[i] = key_generator_->cur_id_start[i] + opt_.num_records / opt_.num_threads;
+        }
         return;
     }
 
@@ -148,13 +149,14 @@ void benchmark_t::load() noexcept
         #pragma omp parallel num_threads(opt_.num_threads)
         {
             // Initialize insert id for each thread
-            key_generator_->current_id_ = cur_id_start[omp_get_thread_num()];
+            key_generator_->tid = omp_get_thread_num();
 
             #pragma omp for schedule(static)
             for (uint64_t i = 0; i < opt_.num_records; ++i)
             {
                 // Generate key in sequence
                 auto key_ptr = key_generator_->next(true);
+                //++(key_generator_->cur_id_table[key_generator_->tid]);
 
                 // Generate random value
                 auto value_ptr = value_generator_.next();
@@ -175,7 +177,7 @@ void benchmark_t::load() noexcept
         #pragma omp parallel num_threads(opt_.num_threads)
         {
             // Initialize insert id for each thread
-            auto id = cur_id_start[omp_get_thread_num()];
+            auto id = key_generator_->cur_id_start[omp_get_thread_num()];
 
             #pragma omp for schedule(static)
             for (uint64_t i = 0; i < opt_.num_records; ++i)
@@ -221,18 +223,13 @@ void benchmark_t::run() noexcept
     // Control variable of monitor thread
     bool finished = false;
 
-    // The amount of inserts expected to be done by each thread + some play room.
-    uint64_t inserts_per_thread = 10 + (opt_.num_ops * opt_.insert_ratio) / opt_.num_threads;
-
-    // Current id after load
-    uint64_t current_id = key_generator_->current_id_;
-
     std::unique_ptr<SystemCounterState> before_sstate;
     if (opt_.enable_pcm)
     {
         before_sstate = std::make_unique<SystemCounterState>();
         *before_sstate = getSystemCounterState();
     }
+
 
     double elapsed = 0.0;
     stopwatch_t sw;
@@ -279,10 +276,7 @@ void benchmark_t::run() noexcept
 
                 // Initialize random seed for each thread
                 key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
-
-                // Initialize insert id for each thread
-                // Start ID + those already loaded
-                key_generator_->current_id_ = cur_id_start[tid] + (opt_.num_records / opt_.num_threads) + 1;
+                key_generator_->set_tid(tid);
 
                 auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
 
@@ -298,22 +292,12 @@ void benchmark_t::run() noexcept
                     // Generate random operation
                     auto op = op_generator_.next();
 
-                    uint64_t id = -1;
-
                     // Generate random scrambled key
                     const char *key_ptr = nullptr;
                     if (op == operation_t::INSERT)
-                    {
                         key_ptr = key_generator_->next(true);
-                    }
                     else
-                    {
-                        if (opt_.bm_mode == mode_t::Time)
-                            id = key_generator_->next_id(1,local_stats[tid].success_insert_count + opt_.num_records / opt_.num_threads);
-                        else
-                            id = key_generator_->next_id();
-                        key_ptr = key_generator_->hash_id(id);
-                    }
+                        key_ptr = key_generator_->next(false);
 
                     auto measure_latency = opt_.latency_sampling == 0.0 ? false : random_bool();
                     if (measure_latency)
@@ -327,6 +311,9 @@ void benchmark_t::run() noexcept
                     {
                         local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
                     }
+
+//                    if(op == operation_t::INSERT)
+//                        ++(key_generator_->cur_id_table[tid]);
                 };
 
                 if (opt_.bm_mode == mode_t::Operation)

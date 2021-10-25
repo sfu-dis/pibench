@@ -223,9 +223,6 @@ private:
 
     /// Intel PCM handler.
     PCM* pcm_;
-
-    // Array storing the start ID for each thread
-    uint64_t * cur_id_start;
 };
 } // namespace PiBench
 

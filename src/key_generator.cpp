@@ -7,7 +7,8 @@ namespace PiBench
 thread_local std::default_random_engine key_generator_t::generator_;
 thread_local uint32_t key_generator_t::seed_;
 thread_local char key_generator_t::buf_[KEY_MAX];
-thread_local uint64_t key_generator_t::current_id_ = 1;
+thread_local uint64_t key_generator_t::tid = -1;
+thread_local uint64_t key_generator_t::rnd_num = 0;
 
 key_generator_t::key_generator_t(size_t N, size_t size, const std::string& prefix)
     : N_(N),
@@ -23,11 +24,12 @@ const char* key_generator_t::next(bool in_sequence)
     uint64_t id = -1;
     if (in_sequence)
     {
-      id = current_id_++;
+      id = cur_id_table[tid]++;
+      // Only ++ op after successfully insertions guarantees 100% positive read
+      //id = cur_id_table[tid];
     }
     else
     {
-      //if opt_.bm_mode == mode_t::Operation  
       id = next_id();
     }
     return hash_id(id);
@@ -71,5 +73,17 @@ const char* key_generator_t::hash_id(uint64_t id)
         memcpy(ptr, &hashed_id, sizeof(hashed_id));
     }
     return buf_;
+}
+
+// Initialize arrays storing the start of current_id and present current_id
+void key_generator_t::cur_id_initialize(uint64_t thread_num) {
+    cur_id_start = new uint64_t[thread_num];
+    cur_id_table = new uint64_t[thread_num];
+    for(uint64_t i = 0; i < thread_num; ++i){
+        // Divide key space
+        cur_id_start[i] = i * (std::numeric_limits<uint64_t>::max() / thread_num) + 1;
+        cur_id_table[i] = cur_id_start[i];
+    }
+    this->thread_num = thread_num;
 }
 } // namespace PiBench

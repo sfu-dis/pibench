@@ -90,21 +90,29 @@ public:
      */
     static uint32_t get_seed() noexcept { return seed_; }
 
+    void set_tid(uint64_t tid){ this->tid = tid;}
+
     static constexpr uint32_t KEY_MAX = 128;
 
-    static thread_local uint64_t current_id_;
+    static thread_local uint64_t tid;
 
     const char* hash_id(uint64_t id);
 
     virtual uint64_t next_id() = 0;
 
-    // Generate an ID within the range [a,b]
-    virtual uint64_t next_id(uint64_t a, uint64_t b) = 0;
+    // Array storing the start ID for each thread
+    uint64_t * cur_id_start = nullptr;
+    uint64_t * cur_id_table = nullptr;
+    void cur_id_initialize(uint64_t thread_num);
 
 protected:
 
     /// Engine used for generating random numbers.
     static thread_local std::default_random_engine generator_;
+
+    static thread_local uint64_t rnd_num;
+
+    uint64_t thread_num;
 
 private:
     /// Seed used for generating random numbers.
@@ -121,7 +129,6 @@ private:
 
     /// Prefix to be preppended to every key.
     const std::string prefix_;
-
     //uint64_t current_id_ = 0;
 };
 
@@ -130,22 +137,25 @@ class uniform_key_generator_t final : public key_generator_t
 public:
     uniform_key_generator_t(size_t N, size_t size, const std::string& prefix = "")
         : dist_(1, N),
-          key_generator_t(N, size, prefix) {}
+          distMax(1, std::numeric_limits<uint64_t>::max()),
+          key_generator_t(N, size, prefix)
+    {
+    }
 
 protected:
     virtual uint64_t next_id() override
     {
-        return dist_(generator_);
-    }
-
-    virtual uint64_t next_id(uint64_t a, uint64_t b) override
-    {
-        std::uniform_int_distribution<uint64_t> dis(a,b);
-        return dis(generator_);
+        //rnd_num is witin the range of [0,2^64-1]
+        rnd_num = distMax(generator_);
+        // Get a random tid
+        uint64_t rnd_tid = rnd_num % thread_num;
+        // Return an id with right range
+        return cur_id_start[rnd_tid] + rnd_num % (cur_id_table[rnd_tid] - cur_id_start[rnd_tid]);
     }
 
 private:
-    std::uniform_int_distribution<uint64_t> dist_;
+    std::uniform_int_distribution<uint64_t> dist_; // This distribution is not needed anymore
+    std::uniform_int_distribution<uint64_t> distMax;
 };
 
 class selfsimilar_key_generator_t final : public key_generator_t
@@ -153,23 +163,24 @@ class selfsimilar_key_generator_t final : public key_generator_t
 public:
     selfsimilar_key_generator_t(size_t N, size_t size, const std::string& prefix = "", float skew = 0.2)
         : dist_(1, N, skew),
+          distMax(1, std::numeric_limits<uint64_t>::max(),skew),
           key_generator_t(N, size, prefix)
     {
     }
 
     virtual uint64_t next_id() override
     {
-        return dist_(generator_);
-    }
-
-    virtual uint64_t next_id(uint64_t a, uint64_t b) override
-    {
-        selfsimilar_int_distribution<uint64_t> dis(a,b);
-        return dis(generator_);
+        //rnd_num is witin the range of [0,2^64-1]
+        rnd_num = distMax(generator_);
+        // Get a random tid
+        uint64_t rnd_tid = rnd_num % thread_num;
+        // Return an id with right range
+        return cur_id_start[rnd_tid] + rnd_num % (cur_id_table[rnd_tid] - cur_id_start[rnd_tid]);
     }
 
 private:
     selfsimilar_int_distribution<uint64_t> dist_;
+    selfsimilar_int_distribution<uint64_t> distMax;
 };
 
 class zipfian_key_generator_t final : public key_generator_t
@@ -177,23 +188,24 @@ class zipfian_key_generator_t final : public key_generator_t
 public:
     zipfian_key_generator_t(size_t N, size_t size, const std::string& prefix = "", float skew = 0.99)
         : dist_(1, N, skew),
+          distMax(1, std::numeric_limits<uint64_t>::max(),skew),
           key_generator_t(N, size, prefix)
     {
     }
 
     virtual uint64_t next_id() override
     {
-        return dist_(generator_);
-    }
-
-    virtual uint64_t next_id(uint64_t a, uint64_t b) override
-    {
-        zipfian_int_distribution<uint64_t> dis(a,b);
-        return dis(generator_);
+        //rnd_num is witin the range of [0,2^64-1]
+        rnd_num = distMax(generator_);
+        // Get a random tid
+        uint64_t rnd_tid = rnd_num % thread_num;
+        // Return an id with right range
+        return cur_id_start[rnd_tid] + rnd_num % (cur_id_table[rnd_tid] - cur_id_start[rnd_tid]);
     }
 
 private:
     zipfian_int_distribution<uint64_t> dist_;
+    zipfian_int_distribution<uint64_t> distMax;
 };
 } // namespace PiBench
 #endif
