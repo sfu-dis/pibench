@@ -13,6 +13,9 @@ Find out more about PiBench and results in our [VLDB paper](http://www.vldb.org/
 Lucas Lersch, Xiangpeng Hao, Ismail Oukid, Tianzheng Wang, Thomas Willhalm:
 Evaluating Persistent Memory Range Indexes. PVLDB 13(4): 574-587 (2019)
 ````
+
+***New!*** Check out the sequel of this evaluation that includes newer PM range indexes! [[code]](https://github.com/sfu-dis/pibench-ep2) [[tech report]](https://arxiv.org/pdf/2201.13047.pdf)
+
 Check out [**PiBench Online**](http://pibench.org) for an online demo of PiBench! Code is available [here](https://github.com/sfu-dis/pibench-online) to deploy your own.
 
 # Building
