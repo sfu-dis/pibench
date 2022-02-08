@@ -3,7 +3,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iomanip>
 #include <iostream>
+#include <thread>
 #include <omp.h>
 #include <functional> // std::bind
 #include <cmath>      // std::ceil
@@ -85,16 +87,8 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
 {
     if (opt.enable_pcm)
     {
-        pcm_ = PCM::getInstance();
-        auto status = pcm_->program();
-        if (status != PCM::Success)
-        {
-            std::cout << "Error opening PCM: " << status << std::endl;
-            if (status == PCM::PMUBusy)
-                pcm_->resetPMU();
-            else
-                exit(0);
-        }
+        std::cout << "Error: PCM is not supported!" << std::endl;
+        exit(0);
     }
 
     size_t key_space_sz = opt_.num_records + (opt_.num_ops * opt_.insert_ratio);
@@ -120,8 +114,6 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
 
 benchmark_t::~benchmark_t()
 {
-    if (pcm_)
-        pcm_->cleanup();
 }
 
 void benchmark_t::load() noexcept
@@ -219,13 +211,6 @@ void benchmark_t::run() noexcept
 
     // Current id after load
     uint64_t current_id = key_generator_->current_id_;
-
-    std::unique_ptr<SystemCounterState> before_sstate;
-    if (opt_.enable_pcm)
-    {
-        before_sstate = std::make_unique<SystemCounterState>();
-        *before_sstate = getSystemCounterState();
-    }
 
     double elapsed = 0.0;
     stopwatch_t sw;
@@ -355,13 +340,6 @@ void benchmark_t::run() noexcept
     }
     omp_set_nested(false);
 
-    std::unique_ptr<SystemCounterState> after_sstate;
-    if (opt_.enable_pcm)
-    {
-        after_sstate = std::make_unique<SystemCounterState>();
-        *after_sstate = getSystemCounterState();
-    }
-
     std::cout << std::fixed << std::setprecision(4);
     std::cout << "\tRun time: " << elapsed << " milliseconds" << std::endl;
 
@@ -453,17 +431,6 @@ void benchmark_t::run() noexcept
               << "\t- Scan completed: " << total_scan / ((double)elapsed / 1000) << " ops/s\n"
               << "\t- Scan succeeded: " << total_success_scan/ ((double)elapsed / 1000) << " ops/s"
               << std::endl;
-
-    if (opt_.enable_pcm)
-    {
-        std::cout << "PCM Metrics:"
-                  << "\n"
-                  << "\tL3 misses: " << getL3CacheMisses(*before_sstate, *after_sstate) << "\n"
-                  << "\tDRAM Reads (bytes): " << getBytesReadFromMC(*before_sstate, *after_sstate) << "\n"
-                  << "\tDRAM Writes (bytes): " << getBytesWrittenToMC(*before_sstate, *after_sstate) << "\n"
-                  << "\tNVM Reads (bytes): " << getBytesReadFromPMM(*before_sstate, *after_sstate) << "\n"
-                  << "\tNVM Writes (bytes): " << getBytesWrittenToPMM(*before_sstate, *after_sstate) << std::endl;
-    }
 
     std::cout << "Samples:" << std::endl;
     std::adjacent_difference(global_stats.begin(), global_stats.end(), global_stats.begin(),

@@ -1,7 +1,6 @@
 #ifndef __NVM_TREE_BENCH_HPP__
 #define __NVM_TREE_BENCH_HPP__
 
-#include "cpucounters.h"
 #include "key_generator.hpp"
 #include "operation_generator.hpp"
 #include "stopwatch.hpp"
@@ -222,7 +221,7 @@ private:
     value_generator_t value_generator_;
 
     /// Intel PCM handler.
-    PCM* pcm_;
+    void* pcm_;
 };
 } // namespace PiBench
 
