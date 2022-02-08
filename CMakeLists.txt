@@ -34,18 +34,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(OpenMP_libiomp5_LIBRARY ${OpenMP_CXX_LIB_NAMES})
 endif()
 
-######################## Intel PCM ########################
-add_custom_command(OUTPUT libPCM.a
-                    COMMAND make lib
-                    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/pcm)
-
-add_custom_target(pcm DEPENDS libPCM.a)
-###########################################################
-
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-include_directories("${PROJECT_SOURCE_DIR}/include"
-                    "${PROJECT_SOURCE_DIR}/pcm")
+include_directories("${PROJECT_SOURCE_DIR}/include")
 
 add_subdirectory(src)
 

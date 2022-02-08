@@ -7,11 +7,9 @@ set(pibench_SRC
 )
 
 add_library(pibench ${pibench_SRC})
-add_dependencies(pibench pcm)
 target_compile_options(pibench PRIVATE ${OpenMP_CXX_FLAGS})
 target_link_libraries(pibench PRIVATE
     ${OpenMP_CXX_FLAGS}
-    ${PROJECT_SOURCE_DIR}/pcm/libPCM.a
     dl)
 
 add_executable(pibench-bin main.cpp)
