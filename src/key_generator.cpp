@@ -9,10 +9,11 @@ thread_local uint32_t key_generator_t::seed_;
 thread_local char key_generator_t::buf_[KEY_MAX];
 thread_local uint64_t key_generator_t::current_id_ = 1;
 
-key_generator_t::key_generator_t(size_t N, size_t size, const std::string& prefix)
+key_generator_t::key_generator_t(size_t N, size_t size, bool apply_hash, const std::string& prefix)
     : N_(N),
       size_(size),
-      prefix_(prefix)
+      prefix_(prefix),
+      apply_hash_(apply_hash)
 {
     memset(buf_, 0, KEY_MAX);
     memcpy(buf_, prefix_.c_str(), prefix_.size());
@@ -37,7 +38,7 @@ const char* key_generator_t::hash_id(uint64_t id)
 {
     char* ptr = &buf_[prefix_.size()];
 
-    uint64_t hashed_id = utils::multiplicative_hash<uint64_t>(id);
+    uint64_t hashed_id = apply_hash_ ? utils::multiplicative_hash<uint64_t>(id) : id;
 
     if (size_ < sizeof(hashed_id))
     {

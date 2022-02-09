@@ -101,15 +101,15 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
     switch (opt_.key_distribution)
     {
     case distribution_t::UNIFORM:
-        key_generator_ = std::make_unique<uniform_key_generator_t>(key_space_sz, opt_.key_size, opt_.key_prefix);
+        key_generator_ = std::make_unique<uniform_key_generator_t>(key_space_sz, opt_.key_size, opt_.apply_hash, opt_.key_prefix);
         break;
 
     case distribution_t::SELFSIMILAR:
-        key_generator_ = std::make_unique<selfsimilar_key_generator_t>(key_space_sz, opt_.key_size, opt_.key_prefix, opt_.key_skew);
+        key_generator_ = std::make_unique<selfsimilar_key_generator_t>(key_space_sz, opt_.key_size, opt_.apply_hash, opt_.key_prefix, opt_.key_skew);
         break;
 
     case distribution_t::ZIPFIAN:
-        key_generator_ = std::make_unique<zipfian_key_generator_t>(key_space_sz, opt_.key_size, opt_.key_prefix, opt_.key_skew);
+        key_generator_ = std::make_unique<zipfian_key_generator_t>(key_space_sz, opt_.key_size, opt_.apply_hash, opt_.key_prefix, opt_.key_skew);
         break;
 
     default:

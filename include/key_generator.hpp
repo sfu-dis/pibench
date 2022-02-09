@@ -36,9 +36,11 @@ public:
      *
      * @param N size of key space.
      * @param size size in Bytes of keys to be generated (excluding prefix).
+     * @param apply_hash whether to apply the multiplicative hash function.
      * @param prefix prefix to be prepended to every key.
      */
-    key_generator_t(size_t N, size_t size, const std::string& prefix = "");
+    key_generator_t(size_t N, size_t size, bool apply_hash = true,
+                    const std::string& prefix = "");
 
     virtual ~key_generator_t() = default;
 
@@ -116,6 +118,9 @@ private:
     /// Size in Bytes of keys to be generated (excluding prefix).
     const size_t size_;
 
+    // Whether to apply the multiplicative hash function.
+    const bool apply_hash_;
+
     /// Prefix to be preppended to every key.
     const std::string prefix_;
 
@@ -125,9 +130,10 @@ private:
 class uniform_key_generator_t final : public key_generator_t
 {
 public:
-    uniform_key_generator_t(size_t N, size_t size, const std::string& prefix = "")
+    uniform_key_generator_t(size_t N, size_t size, bool apply_hash = true,
+                            const std::string& prefix = "")
         : dist_(1, N),
-          key_generator_t(N, size, prefix) {}
+          key_generator_t(N, size, apply_hash, prefix) {}
 
 protected:
     virtual uint64_t next_id() override
@@ -142,9 +148,10 @@ private:
 class selfsimilar_key_generator_t final : public key_generator_t
 {
 public:
-    selfsimilar_key_generator_t(size_t N, size_t size, const std::string& prefix = "", float skew = 0.2)
+    selfsimilar_key_generator_t(size_t N, size_t size, bool apply_hash = true,
+                                const std::string& prefix = "", float skew = 0.2)
         : dist_(1, N, skew),
-          key_generator_t(N, size, prefix)
+          key_generator_t(N, size, apply_hash, prefix)
     {
     }
 
@@ -160,9 +167,10 @@ private:
 class zipfian_key_generator_t final : public key_generator_t
 {
 public:
-    zipfian_key_generator_t(size_t N, size_t size, const std::string& prefix = "", float skew = 0.99)
+    zipfian_key_generator_t(size_t N, size_t size, bool apply_hash = true,
+                            const std::string& prefix = "", float skew = 0.99)
         : dist_(1, N, skew),
-          key_generator_t(N, size, prefix)
+          key_generator_t(N, size, apply_hash, prefix)
     {
     }
 

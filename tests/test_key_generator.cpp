@@ -36,7 +36,7 @@ class KeyGeneratorTest : public testing::Test
     std::unique_ptr<key_generator_t>
     Instantiate(size_t N, size_t size, const std::string& prefix = "")
     {        
-        return std::make_unique<T>(N, size, prefix);
+        return std::make_unique<T>(N, size, true, prefix);
     }
 
   private:
