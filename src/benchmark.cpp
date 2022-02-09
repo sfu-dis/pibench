@@ -112,6 +112,10 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
         key_generator_ = std::make_unique<zipfian_key_generator_t>(key_space_sz, opt_.key_size, opt_.apply_hash, opt_.key_prefix, opt_.key_skew);
         break;
 
+    case distribution_t::RDTSC:
+        key_generator_ = std::make_unique<rdtsc_key_generator_t>(key_space_sz, opt_.key_size, opt_.apply_hash, opt_.key_prefix);
+        break;
+
     default:
         std::cout << "Error: unknown distribution!" << std::endl;
         exit(0);
@@ -593,6 +597,9 @@ std::ostream& operator<<(std::ostream& os, const PiBench::distribution_t& dist)
         break;
     case PiBench::distribution_t::ZIPFIAN:
         return os << "ZIPFIAN";
+        break;
+    case PiBench::distribution_t::RDTSC:
+        return os << "RDTSC";
         break;
     default:
         return os << static_cast<uint8_t>(dist);

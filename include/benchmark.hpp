@@ -35,7 +35,8 @@ enum class distribution_t : uint8_t
 {
     UNIFORM = 0,
     SELFSIMILAR = 1,
-    ZIPFIAN = 2
+    ZIPFIAN = 2,
+    RDTSC = 3
 };
 
 /**

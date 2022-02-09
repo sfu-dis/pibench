@@ -159,10 +159,12 @@ int main(int argc, char** argv)
                     << std::endl;
                 opt.key_distribution = distribution_t::ZIPFIAN;
             }
+            else if(dist.compare("rdtsc") == 0)
+                opt.key_distribution = distribution_t::RDTSC;
             else
             {
                 std::cout << "Invalid key distribution, must be one of "
-                << "[UNIFORM | SELFSIMILAR | ZIPFIAN], but is " << dist << std::endl;
+                << "[UNIFORM | SELFSIMILAR | ZIPFIAN | RDTSC], but is " << dist << std::endl;
                 exit(1);
             }
         }
@@ -269,6 +271,18 @@ int main(int argc, char** argv)
     if(opt.key_distribution == distribution_t::ZIPFIAN && (opt.key_skew < 0.0 || opt.key_skew > 1.0))
     {
         std::cout << "Skew factor must be in the range [0.0 , 1.0]." << std::endl;
+        exit(1);
+    }
+
+    if(opt.key_distribution == distribution_t::RDTSC && opt.apply_hash)
+    {
+        std::cout << "Multiplicative hash function should not be applied with RDTSC." << std::endl;
+        exit(1);
+    }
+
+    if(opt.key_distribution == distribution_t::RDTSC && !opt.skip_verify)
+    {
+        std::cout << "Verify phase should be skipped with RDTSC." << std::endl;
         exit(1);
     }
 

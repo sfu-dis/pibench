@@ -1,6 +1,7 @@
 #ifndef __KEY_GENERATOR_HPP__
 #define __KEY_GENERATOR_HPP__
 
+#include "rdtsc.hpp"
 #include "selfsimilar_int_distribution.hpp"
 #include "zipfian_int_distribution.hpp"
 
@@ -181,6 +182,20 @@ public:
 
 private:
     zipfian_int_distribution<uint64_t> dist_;
+};
+
+class rdtsc_key_generator_t final : public key_generator_t
+{
+public:
+    rdtsc_key_generator_t(size_t N, size_t size, bool apply_hash = true,
+                          const std::string& prefix = "")
+        : key_generator_t(N, size, apply_hash, prefix) {}
+
+protected:
+    virtual uint64_t next_id() override
+    {
+        return rdtsc();
+    }
 };
 } // namespace PiBench
 #endif
