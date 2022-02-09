@@ -163,6 +163,12 @@ void benchmark_t::load() noexcept
 
     std::cout << "Loading finished in " << elapsed << " milliseconds" << std::endl;
 
+    if (opt_.skip_verify)
+    {
+        std::cout << "Verification skipped; benchmark started." << std::endl;
+        return;
+    }
+
     // Verify all keys can be found
     {
         #pragma omp parallel num_threads(opt_.num_threads)
@@ -179,6 +185,7 @@ void benchmark_t::load() noexcept
                 static thread_local char value_out[value_generator_t::VALUE_MAX];
                 bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
                 if (!found) {
+                    std::cout << "Error: missing key!" << std::endl;
                     exit(1);
                 }
             }

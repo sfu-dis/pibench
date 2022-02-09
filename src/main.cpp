@@ -46,6 +46,7 @@ int main(int argc, char** argv)
             ("pool_path", "Path to persistent pool", cxxopts::value<std::string>()->default_value("\"" + tree_opt.pool_path + "\""))
             ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value(std::to_string(tree_opt.pool_size)))
             ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value((opt.skip_load ? "true" : "false")))
+            ("skip_verify", "Skip the verify phase", cxxopts::value<bool>()->default_value((opt.skip_verify ? "true" : "false")))
             ("latency_sampling", "Sample latency of requests", cxxopts::value<float>()->default_value(std::to_string(opt.latency_sampling)))
             ("m,mode","Benchmark mode",cxxopts::value<std::string>()->default_value("operation"))
             ("seconds","Time (seconds) PiBench run in time-based mode",cxxopts::value<float>()->default_value(std::to_string(opt.seconds)))
@@ -69,6 +70,11 @@ int main(int argc, char** argv)
         if (result.count("skip_load"))
         {
             opt.skip_load = result["skip_load"].as<bool>();
+        }
+
+        if (result.count("skip_verify"))
+        {
+            opt.skip_verify = result["skip_verify"].as<bool>();
         }
 
         if (result.count("latency_sampling"))

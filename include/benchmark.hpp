@@ -101,6 +101,9 @@ struct options_t
     /// Whether to skip the load phase.
     bool skip_load = false;
 
+    /// Whether to skip the verify phase.
+    bool skip_verify = false;
+
     /// Ratio of requests to sample latency from (between 0.0 and 1.0).
     float latency_sampling = 0.0;
 
