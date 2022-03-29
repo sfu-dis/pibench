@@ -141,6 +141,39 @@ void benchmark_t::load() noexcept
     stopwatch_t sw;
     sw.start();
 
+    if (opt_.bulk_load)
+    {
+        std::cout << "Bulk loading..." << std::endl;
+        size_t num_bytes = opt_.num_records * (key_generator_->size() + opt_.value_size);
+        char *kv_pairs = (char *)aligned_alloc(64, num_bytes);
+        char *pos = kv_pairs;
+
+        key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+        for (uint64_t i = 0; i < opt_.num_records; ++i)
+        {
+            // Generate key in sequence
+            auto key_ptr = key_generator_->next(true);
+
+            // Generate random value
+            auto value_ptr = value_generator_.next();
+
+            memcpy(pos, key_ptr, key_generator_->size());
+            pos += key_generator_->size();
+
+            memcpy(pos, value_ptr, opt_.value_size);
+            pos += opt_.value_size;
+        }
+
+        auto r = tree_->bulk_load(kv_pairs, opt_.num_records, key_generator_->size(), opt_.value_size);
+        free(kv_pairs);
+
+        if (!r)
+        {
+            std::cout << "Bulk loading failed!" << std::endl;
+            exit(1);
+        }
+    }
+    else
     {
         #pragma omp parallel num_threads(opt_.num_threads)
         {

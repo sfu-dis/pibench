@@ -36,6 +36,21 @@ public:
     virtual ~tree_api(){};
 
     /**
+     * @brief Bulk loading given keys and values.
+     * 
+     * @param data Pointer to array of key-value pairs.
+     * @param num_records Number of key-value pairs.
+     * @param key_sz Size of key in bytes.
+     * @param value_sz Size of value in bytes.
+     * @return true if bulk loading was successful
+     * @return false if bulk loading failed
+     */
+    virtual bool bulk_load(const char* data, size_t num_records, size_t key_sz, size_t value_sz)
+    {
+        return false;
+    }
+
+    /**
      * @brief Lookup record with given key.
      * 
      * @param[in] key Pointer to beginning of key.

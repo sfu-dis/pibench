@@ -45,6 +45,7 @@ int main(int argc, char** argv)
             ("pcm", "Turn on Intel PCM", cxxopts::value<bool>()->default_value((opt.enable_pcm ? "true" : "false")))
             ("pool_path", "Path to persistent pool", cxxopts::value<std::string>()->default_value("\"" + tree_opt.pool_path + "\""))
             ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value(std::to_string(tree_opt.pool_size)))
+            ("bulk_load", "Use bulk loading", cxxopts::value<bool>()->default_value((opt.bulk_load ? "true" : "false")))
             ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value((opt.skip_load ? "true" : "false")))
             ("skip_verify", "Skip the verify phase", cxxopts::value<bool>()->default_value((opt.skip_verify ? "true" : "false")))
             ("apply_hash", "Apply the multiplicative hash function", cxxopts::value<bool>()->default_value((opt.apply_hash ? "true" : "false")))
@@ -66,6 +67,11 @@ int main(int argc, char** argv)
         if (result.count("pcm"))
         {
             opt.enable_pcm = result["pcm"].as<bool>();
+        }
+
+        if (result.count("bulk_load"))
+        {
+            opt.bulk_load = result["bulk_load"].as<bool>();
         }
 
         if (result.count("skip_load"))

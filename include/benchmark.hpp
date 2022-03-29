@@ -99,6 +99,9 @@ struct options_t
     /// Whether to enable Intel PCM for profiling.
     bool enable_pcm = true;
 
+    /// Whether to do bulk loading.
+    bool bulk_load = false;
+
     /// Whether to skip the load phase.
     bool skip_load = false;
 
