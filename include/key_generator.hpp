@@ -59,7 +59,7 @@ public:
      *                    if @false keys are generated randomly.
      * @return const char* pointer to beginning of key.
      */
-    virtual const char* next(bool in_sequence = false) final;
+    virtual const char* next(bool in_sequence = false);
 
     /**
      * @brief Returns total key size (including prefix).
@@ -190,6 +190,9 @@ public:
     rdtsc_key_generator_t(size_t N, size_t size, bool apply_hash = true,
                           const std::string& prefix = "")
         : key_generator_t(N, size, apply_hash, prefix) {}
+
+    // Ignore 'in_sequence' and always use RDTSC.
+    virtual const char* next(bool in_sequence = false) override;
 
 protected:
     virtual uint64_t next_id() override

@@ -73,4 +73,11 @@ const char* key_generator_t::hash_id(uint64_t id)
     }
     return buf_;
 }
+
+const char* rdtsc_key_generator_t::next(bool in_sequence)
+{
+    (void)in_sequence;
+    uint64_t id = next_id();
+    return hash_id(id);
+}
 } // namespace PiBench
