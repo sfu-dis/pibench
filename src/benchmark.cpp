@@ -1,5 +1,6 @@
 #include "benchmark.hpp"
 #include "utils.hpp"
+#include "sched.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -177,6 +178,7 @@ void benchmark_t::load() noexcept
     {
         #pragma omp parallel num_threads(opt_.num_threads)
         {
+            set_affinity(omp_get_thread_num());
             // Initialize insert id for each thread
             key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
 
@@ -210,6 +212,7 @@ void benchmark_t::load() noexcept
     {
         #pragma omp parallel num_threads(opt_.num_threads)
         {
+            set_affinity(omp_get_thread_num());
             // Initialize insert id for each thread
             auto id = opt_.num_records / opt_.num_threads * omp_get_thread_num();
 
@@ -314,6 +317,7 @@ void benchmark_t::run() noexcept
             #pragma omp parallel num_threads(opt_.num_threads)
             {
                 auto tid = omp_get_thread_num();
+                set_affinity(tid);
 
                 // Initialize random seed for each thread
                 key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
