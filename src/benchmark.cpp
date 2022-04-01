@@ -196,11 +196,13 @@ void benchmark_t::load() noexcept
             #pragma omp for schedule(static)
             for (uint64_t i = 0; i < opt_.num_records; ++i)
             {
+                auto next_key = key_generator_->current_id_;
+
                 // Generate key in sequence
                 auto key_ptr = key_generator_->next(true);
 
                 // Generate random value
-                auto value_ptr = value_generator_.next();
+                auto value_ptr = value_generator_.from_key(next_key);
 
                 auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
                 assert(r);
@@ -242,12 +244,17 @@ void benchmark_t::load() noexcept
             for (uint64_t i = 0; i < opt_.num_records; ++i)
             {
                 // Generate key in sequence
+                auto value_ptr = value_generator_.from_key(id);
                 auto key_ptr = key_generator_->hash_id(id++);
 
                 static thread_local char value_out[value_generator_t::VALUE_MAX];
                 bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
                 if (!found) {
                     std::cout << "Error: missing key!" << std::endl;
+                    exit(1);
+                }
+                if (memcmp(value_ptr, value_out, opt_.value_size)) {
+                    std::cout << "Error: key mapped to wrong value" << std::endl;
                     exit(1);
                 }
             }
