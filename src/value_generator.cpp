@@ -12,8 +12,7 @@ thread_local char value_generator_t::buf_[KEY_MAX];
 
 const char* value_generator_t::from_key(uint64_t key)
 {
-    auto hashed = utils::multiplicative_hash<uint64_t>(key);
-    memcpy(buf_, &hashed, sizeof(uint64_t));
+    memcpy(buf_, &key, sizeof(uint64_t));
     return buf_;
 }
 }
