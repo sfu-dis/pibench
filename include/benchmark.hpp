@@ -7,6 +7,7 @@
 #include "stopwatch.hpp"
 #include "tree_api.hpp"
 #include "value_generator.hpp"
+#include "key_loader.hpp"
 
 #include <cstdint>
 #include <memory> // For unique_ptr
@@ -217,6 +218,9 @@ private:
 
     /// Key generator.
     std::unique_ptr<key_generator_t> key_generator_;
+
+    /// Key loader
+    std::unique_ptr<key_loader_t> key_loader_;
 
     /// Value generator.
     value_generator_t value_generator_;

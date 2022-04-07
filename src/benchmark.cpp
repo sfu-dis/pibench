@@ -116,6 +116,9 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
         std::cout << "Error: unknown distribution!" << std::endl;
         exit(0);
     }
+
+    // 
+    key_loader_ = std::make_unique<key_loader_t>();
 }
 
 benchmark_t::~benchmark_t()

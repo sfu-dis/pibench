@@ -1,5 +1,6 @@
 set(pibench_SRC
     key_generator.cpp
+    key_loader.cpp
     library_loader.cpp
     benchmark.cpp
     operation_generator.cpp
