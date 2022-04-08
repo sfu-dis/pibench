@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <fstream>
+#include <stdio.h>
+#include <string.h>
 
 
 class key_loader_t
@@ -20,13 +22,32 @@ public:
 
     void fill_buffer();
 
+    std::pair<char*, uint64_t> next();
+
+    char const *filename = "../../datasets/new-born-names.txt";
+
+    static thread_local uint64_t current_id_;
+    static uint32_t get_seed() noexcept { return seed_; }
+    static void set_seed(uint32_t seed)
+    {
+        seed_ = seed;
+        generator_.seed(seed_);
+    }
+
+    uint64_t next_id()
+    {
+        return dist_(generator_);
+    }
+
 private:
-    u_int64_t get_number_lines(char* filename);
+    static thread_local uint32_t seed_;
+    static thread_local std::default_random_engine generator_;
+    std::uniform_int_distribution<uint64_t> dist_;
 
-    char* filename = "../datasets/new-born-names.txt";
+    uint64_t get_number_lines(char const *filename);
 
-    u_int64_t buffer_len;
-    u_int64_t* key_len;
+    uint64_t buffer_len;
+    uint64_t* key_len;
     char** keys;
 };
 

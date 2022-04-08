@@ -119,6 +119,7 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
 
     // 
     key_loader_ = std::make_unique<key_loader_t>();
+    key_loader_->fill_buffer();
 }
 
 benchmark_t::~benchmark_t()
@@ -149,13 +150,18 @@ void benchmark_t::load() noexcept
             #pragma omp for schedule(static)
             for (uint64_t i = 0; i < opt_.num_records; ++i)
             {
-                // Generate key in sequence
-                auto key_ptr = key_generator_->next(true);
+                // // Generate key in sequence
+                // auto key_ptr = key_generator_->next(true);
 
-                // Generate random value
-                auto value_ptr = value_generator_.next();
+                // // Generate random value
+                // auto value_ptr = value_generator_.next();
 
-                auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+                // auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+                // assert(r);
+                auto key_pair = key_loader_->next();
+                auto value_pair = key_loader_->next();
+                auto r = tree_->insert(key_pair.first, key_pair.second, value_pair.first, value_pair.second);
+                std::cout << "load: " << key_pair.first << std::endl;
                 assert(r);
             }
         }
@@ -167,26 +173,26 @@ void benchmark_t::load() noexcept
     std::cout << "Loading finished in " << elapsed << " milliseconds" << std::endl;
 
     // Verify all keys can be found
-    {
-        #pragma omp parallel num_threads(opt_.num_threads)
-        {
-            // Initialize insert id for each thread
-            auto id = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+    // {
+    //     #pragma omp parallel num_threads(opt_.num_threads)
+    //     {
+    //         // Initialize insert id for each thread
+    //         auto id = opt_.num_records / opt_.num_threads * omp_get_thread_num();
 
-            #pragma omp for schedule(static)
-            for (uint64_t i = 0; i < opt_.num_records; ++i)
-            {
-                // Generate key in sequence
-                auto key_ptr = key_generator_->hash_id(id++);
+    //         #pragma omp for schedule(static)
+    //         for (uint64_t i = 0; i < opt_.num_records; ++i)
+    //         {
+    //             // Generate key in sequence
+    //             auto key_ptr = key_generator_->hash_id(id++);
 
-                static thread_local char value_out[value_generator_t::VALUE_MAX];
-                bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
-                if (!found) {
-                    exit(1);
-                }
-            }
-        }
-    }
+    //             static thread_local char value_out[value_generator_t::VALUE_MAX];
+    //             bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
+    //             if (!found) {
+    //                 exit(1);
+    //             }
+    //         }
+    //     }
+    // }
 
     std::cout << "Load verified; benchmark started." << std::endl;
 }
@@ -508,7 +514,10 @@ void benchmark_t::run_op(operation_t op, const char *key_ptr,
     {
     case operation_t::READ:
     {
-        auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
+        // auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
+        auto key_pair = key_loader_->next();
+        auto r = tree_->find(key_pair.first, key_pair.second, value_out);
+        std::cout << "read: " << key_pair.first << std::endl;
         ++stats.read_count;
         if (r)
         {
@@ -520,8 +529,12 @@ void benchmark_t::run_op(operation_t op, const char *key_ptr,
     case operation_t::INSERT:
     {
         // Generate random value
-        auto value_ptr = value_generator_.next();
-        auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+        // auto value_ptr = value_generator_.next();
+        // auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+        auto key_pair = key_loader_->next();
+        auto value_pair = key_loader_->next();
+        auto r = tree_->insert(key_pair.first, key_pair.second, value_pair.first, value_pair.second);
+        std::cout << "insert: " << key_pair.first << std::endl;
         ++stats.insert_count;
         if (r)
         {
