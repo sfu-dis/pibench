@@ -12,6 +12,7 @@
 #include <fstream>
 #include <regex>            // std::regex_replace
 #include <sys/utsname.h>    // uname
+#include <sys/wait.h>       // waitpid
 
 namespace PiBench
 {
@@ -267,6 +268,36 @@ void benchmark_t::run() noexcept
     // Current id after load
     uint64_t current_id = key_generator_->current_id_;
 
+    pid_t perf_pid;
+    if (opt_.enable_perf)
+    {
+        std::cout << "Starting perf..." << std::endl;
+
+        std::stringstream parent_pid;
+        parent_pid << getpid();
+
+        pid_t pid = fork();
+        // Launch profiler
+        if (pid == 0)
+        {
+            if (opt_.perf_record_args == "")
+            {
+                exit(execl("/usr/bin/perf", "perf", "record", "-e",
+                        "cache-references,cache-misses,cycles,instructions,branches,faults", "-p",
+                        parent_pid.str().c_str(), nullptr));
+            }
+            else
+            {
+                exit(execl("/usr/bin/perf", "perf", "record", opt_.perf_record_args.c_str(), "-p",
+                        parent_pid.str().c_str(), nullptr));
+            }
+        }
+        else
+        {
+            perf_pid = pid;
+        }
+    }
+
     std::unique_ptr<SystemCounterState> before_sstate;
     if (opt_.enable_pcm)
     {
@@ -402,6 +433,13 @@ void benchmark_t::run() noexcept
         }
     }
     omp_set_nested(false);
+
+    if (opt_.enable_perf)
+    {
+        std::cout << "Stopping perf..." << std::endl;
+        kill(perf_pid, SIGINT);
+        waitpid(perf_pid, nullptr, 0);
+    }
 
     std::unique_ptr<SystemCounterState> after_sstate;
     if (opt_.enable_pcm)

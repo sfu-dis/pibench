@@ -52,6 +52,8 @@ int main(int argc, char** argv)
             ("latency_sampling", "Sample latency of requests", cxxopts::value<float>()->default_value(std::to_string(opt.latency_sampling)))
             ("m,mode","Benchmark mode",cxxopts::value<std::string>()->default_value("operation"))
             ("seconds","Time (seconds) PiBench run in time-based mode",cxxopts::value<float>()->default_value(std::to_string(opt.seconds)))
+            ("enable_perf", "Enable perf", cxxopts::value<bool>()->default_value((opt.enable_perf ? "true" : "false")))
+            ("perf_record_args", "Arguments to perf-record", cxxopts::value<std::string>()->default_value(""))
             ("help", "Print help")
         ;
 
@@ -232,6 +234,18 @@ int main(int argc, char** argv)
         // Parse "seconds"
         if (result.count("seconds"))
             opt.seconds = result["seconds"].as<float>();
+
+        // Parse "enable_perf"
+        if (result.count("enable_perf"))
+        {
+            opt.enable_perf = result["enable_perf"].as<bool>();
+        }
+
+        // Parse "perf_record_args"
+        if (result.count("perf_record_args"))
+        {
+            opt.perf_record_args = result["perf_record_args"].as<std::string>();
+        }
     }
     catch (const cxxopts::OptionException& e)
     {
@@ -295,6 +309,12 @@ int main(int argc, char** argv)
     if((opt.latency_sampling < 0.0 || opt.latency_sampling > 1.0))
     {
         std::cout << "Latency sampling must be in the range [0.0 , 1.0]." << std::endl;
+        exit(1);
+    }
+
+    if(!opt.enable_perf && opt.perf_record_args != "")
+    {
+        std::cout << "Error: perf is disabled but perf_record_args is not empty" << std::endl;
         exit(1);
     }
 

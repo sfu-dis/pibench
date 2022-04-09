@@ -119,6 +119,12 @@ struct options_t
 
     /// Experiment mode
     mode_t bm_mode = mode_t::Operation;
+
+    /// Whether to use perf for profiling.
+    bool enable_perf = false;
+
+    /// Arguments to perf-record
+    std::string perf_record_args = "";
 };
 
 /**
