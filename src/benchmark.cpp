@@ -282,14 +282,32 @@ void benchmark_t::run() noexcept
         {
             if (opt_.perf_record_args == "")
             {
-                exit(execl("/usr/bin/perf", "perf", "record", "-e",
-                        "cache-references,cache-misses,cycles,instructions,branches,faults", "-p",
+                exit(execl("/usr/bin/perf", "perf", "record", "--call-graph", "dwarf", "-e", "cycles", "-p",
                         parent_pid.str().c_str(), nullptr));
             }
             else
             {
-                exit(execl("/usr/bin/perf", "perf", "record", opt_.perf_record_args.c_str(), "-p",
-                        parent_pid.str().c_str(), nullptr));
+                std::vector<char *> argv;
+                argv.push_back((char *)"perf");
+                argv.push_back((char *)"record");
+
+                std::string parent_pid_str = parent_pid.str();
+                argv.push_back((char *)"-p");
+                argv.push_back(const_cast<char *>(parent_pid_str.c_str()));
+
+                // Ref: https://stackoverflow.com/a/5607650
+                std::stringstream ss(opt_.perf_record_args);
+                std::istream_iterator<std::string> begin(ss);
+                std::istream_iterator<std::string> end;
+                std::vector<std::string> args(begin, end);
+                for (auto &s : args)
+                {
+                    argv.push_back(const_cast<char *>(s.c_str()));
+                }
+
+                // Ref: https://stackoverflow.com/a/35247904
+                argv.push_back(nullptr);
+                exit(execv("/usr/bin/perf", argv.data()));
             }
         }
         else
