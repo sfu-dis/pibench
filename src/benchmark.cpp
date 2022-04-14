@@ -117,7 +117,7 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
         exit(0);
     }
 
-    // 
+    // create key loader instance
     key_loader_ = std::make_unique<key_loader_t>();
     key_loader_->fill_buffer();
 }
@@ -161,7 +161,7 @@ void benchmark_t::load() noexcept
                 auto key_pair = key_loader_->next();
                 auto value_pair = key_loader_->next();
                 auto r = tree_->insert(key_pair.first, key_pair.second, value_pair.first, value_pair.second);
-                std::cout << "load: " << key_pair.first << std::endl;
+                // std::cout << "load: " << key_pair.first << std::endl;
                 assert(r);
             }
         }
@@ -229,6 +229,8 @@ void benchmark_t::run() noexcept
     // Current id after load
     uint64_t current_id = key_generator_->current_id_;
 
+    current_id = key_loader_->current_id_;
+
     std::unique_ptr<SystemCounterState> before_sstate;
     if (opt_.enable_pcm)
     {
@@ -283,8 +285,12 @@ void benchmark_t::run() noexcept
                 // Initialize random seed for each thread
                 key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
 
+                key_loader_->set_seed(opt_.rnd_seed * (tid + 1));
+
                 // Initialize insert id for each thread
                 key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
+
+                key_loader_->current_id_ = current_id + (inserts_per_thread * tid);
 
                 auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
 
@@ -517,7 +523,7 @@ void benchmark_t::run_op(operation_t op, const char *key_ptr,
         // auto r = tree_->find(key_ptr, key_generator_->size(), value_out);
         auto key_pair = key_loader_->next();
         auto r = tree_->find(key_pair.first, key_pair.second, value_out);
-        std::cout << "read: " << key_pair.first << std::endl;
+        // std::cout << "read: " << key_pair.first << std::endl;
         ++stats.read_count;
         if (r)
         {
@@ -534,7 +540,7 @@ void benchmark_t::run_op(operation_t op, const char *key_ptr,
         auto key_pair = key_loader_->next();
         auto value_pair = key_loader_->next();
         auto r = tree_->insert(key_pair.first, key_pair.second, value_pair.first, value_pair.second);
-        std::cout << "insert: " << key_pair.first << std::endl;
+        // std::cout << "insert: " << key_pair.first << std::endl;
         ++stats.insert_count;
         if (r)
         {

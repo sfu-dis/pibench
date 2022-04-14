@@ -43,8 +43,8 @@ void key_loader_t::fill_buffer()
     {
         if (line[0] == '\n')    
             continue;
-        else if (line[read-1] == '\n')        
-            line[read-1] = '\0';
+        else if (line[read - 1] == '\n')        
+            line[read - 1] = '\0';
         this->keys[idx] = new char[read - 1];
         memcpy(this->keys[idx], line, read - 1);
         this->key_len[idx] = read - 1;
