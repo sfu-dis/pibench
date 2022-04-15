@@ -145,7 +145,9 @@ void benchmark_t::load() noexcept
         #pragma omp parallel num_threads(opt_.num_threads)
         {
             // Initialize insert id for each thread
-            key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+            // key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+            
+            key_loader_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
 
             #pragma omp for schedule(static)
             for (uint64_t i = 0; i < opt_.num_records; ++i)
@@ -227,9 +229,9 @@ void benchmark_t::run() noexcept
     uint64_t inserts_per_thread = 10 + (opt_.num_ops * opt_.insert_ratio) / opt_.num_threads;
 
     // Current id after load
-    uint64_t current_id = key_generator_->current_id_;
+    // uint64_t current_id = key_generator_->current_id_;
 
-    current_id = key_loader_->current_id_;
+    uint64_t current_id = key_loader_->current_id_;
 
     std::unique_ptr<SystemCounterState> before_sstate;
     if (opt_.enable_pcm)
@@ -283,12 +285,12 @@ void benchmark_t::run() noexcept
                 auto tid = omp_get_thread_num();
 
                 // Initialize random seed for each thread
-                key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
+                // key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
 
                 key_loader_->set_seed(opt_.rnd_seed * (tid + 1));
 
                 // Initialize insert id for each thread
-                key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
+                // key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
 
                 key_loader_->current_id_ = current_id + (inserts_per_thread * tid);
 
@@ -310,7 +312,7 @@ void benchmark_t::run() noexcept
                     const char *key_ptr = nullptr;
                     if (op == operation_t::INSERT)
                     {
-                        key_ptr = key_generator_->next(true);
+                        // key_ptr = key_generator_->next(true);
                     }
                     else
                     {
