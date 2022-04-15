@@ -67,7 +67,7 @@ TEST_F(ValueGeneratorTest, SimpleMultithread)
     );
 
     other.join();
-    EXPECT_EQ(gen.get_seed(), 1729);
+    EXPECT_EQ(gen.get_seed(), 645175127);
 }
 
 TEST_F(ValueGeneratorTest, ResetSeed)

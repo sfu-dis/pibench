@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <random>
 #include <array>
+#include "third_party/foedus/uniform_random.hpp"
 
 namespace PiBench
 {
@@ -46,7 +47,7 @@ public:
      */
     operation_t next()
     {
-        return ops_[dist_(gen_) & 0xff];
+        return ops_[rng_.next_uint32() & 0xff];
     }
 
     /**
@@ -56,8 +57,7 @@ public:
      */
     static void set_seed(uint32_t seed)
     {
-        seed_ = seed;
-        gen_.seed(seed_);
+        rng_.set_current_seed(seed);
     }
 
     /**
@@ -65,17 +65,11 @@ public:
      *
      * @return uint32_t
      */
-    static uint32_t get_seed() noexcept { return seed_; }
+    static uint32_t get_seed() noexcept { return rng_.get_current_seed(); }
 
 private:
-    /// Seed used for generating random numbers.
-    static thread_local uint32_t seed_;
-
     /// Engine used for generation random numbers.
-    static thread_local std::default_random_engine gen_;
-
-    /// Weighted distribution for generating random numbers.
-    std::uniform_int_distribution<uint32_t> dist_;
+    static thread_local foedus::assorted::UniformRandom rng_;
 
     std::array<operation_t, 256> ops_;
 };
