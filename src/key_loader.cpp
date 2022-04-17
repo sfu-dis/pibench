@@ -21,7 +21,7 @@ key_loader_t::key_loader_t()
 {
     this->buffer_len = this->get_number_lines(this->filename);
     this->keys = new char*[this->buffer_len];
-    this->key_len = new uint64_t[this->buffer_len];
+    //this->key_len = new uint64_t[this->buffer_len];
 }
 
 
@@ -32,7 +32,7 @@ void key_loader_t::fill_buffer()
     ssize_t read;
     char* line = NULL;
     uint64_t idx = 0;
-
+    //uint64_t max = 0;
     if (!fd)
     {
         std::cout << "Error open selected file." << std::endl;
@@ -45,20 +45,23 @@ void key_loader_t::fill_buffer()
             continue;
         else if (line[read - 1] == '\n')        
             line[read - 1] = '\0';
-        this->keys[idx] = new char[read - 1];
-        memcpy(this->keys[idx], line, read - 1);
-        this->key_len[idx] = read - 1;
+        this->keys[idx] = new char[key_len];
+        memcpy(this->keys[idx], line, key_len);
+        //this->key_len[idx] = read - 1;
+	//if (read-1 > max)
+	    //max = read - 1;
         // std::cout << "line: " << this->keys[idx] << std::endl;
         // std::cout << "read: " << this->key_len[idx] << std::endl;
         idx++;
     }
+    //printf("The max length of key is %lld\n", max);
 }
 
 
 std::pair<char*, uint64_t> key_loader_t::next()
 {
     uint64_t random_idx = next_id() % this->buffer_len;
-    return std::make_pair(this->keys[random_idx], this->key_len[random_idx]);
+    return std::make_pair(this->keys[random_idx], key_len);
 }
 
 

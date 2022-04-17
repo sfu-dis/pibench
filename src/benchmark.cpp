@@ -161,8 +161,8 @@ void benchmark_t::load() noexcept
                 // auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
                 // assert(r);
                 auto key_pair = key_loader_->next();
-                auto value_pair = key_loader_->next();
-                auto r = tree_->insert(key_pair.first, key_pair.second, value_pair.first, value_pair.second);
+                auto val = key_loader_->next_id();// key_loader_->next();
+                auto r = tree_->insert(key_pair.first, key_pair.second, (const char*)&val, 8);
                 // std::cout << "load: " << key_pair.first << std::endl;
                 assert(r);
             }
@@ -540,8 +540,8 @@ void benchmark_t::run_op(operation_t op, const char *key_ptr,
         // auto value_ptr = value_generator_.next();
         // auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
         auto key_pair = key_loader_->next();
-        auto value_pair = key_loader_->next();
-        auto r = tree_->insert(key_pair.first, key_pair.second, value_pair.first, value_pair.second);
+        auto val = key_loader_->next_id();//key_loader_->next();
+        auto r = tree_->insert(key_pair.first, key_pair.second, (const char*)&val, 8);
         // std::cout << "insert: " << key_pair.first << std::endl;
         ++stats.insert_count;
         if (r)

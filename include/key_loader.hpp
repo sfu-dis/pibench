@@ -24,7 +24,7 @@ public:
 
     std::pair<char*, uint64_t> next();
 
-    char const *filename = "../../datasets/examiner-date-text.txt";
+    char const *filename = "../../datasets/names.txt";
 
     static thread_local uint64_t current_id_;
     static uint32_t get_seed() noexcept { return seed_; }
@@ -47,7 +47,8 @@ private:
     uint64_t get_number_lines(char const *filename);
 
     uint64_t buffer_len;
-    uint64_t* key_len;
+    //uint64_t* key_len;
+    uint64_t key_len = 26;
     char** keys;
 };
 
