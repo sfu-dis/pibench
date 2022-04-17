@@ -144,6 +144,9 @@ void benchmark_t::load() noexcept
     {
         #pragma omp parallel num_threads(opt_.num_threads)
         {
+
+	    auto tid = omp_get_thread_num();
+            key_loader_->set_seed(opt_.rnd_seed * (tid + 1));
             // Initialize insert id for each thread
             // key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
             
