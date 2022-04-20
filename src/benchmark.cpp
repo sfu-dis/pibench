@@ -1,6 +1,7 @@
 #include "benchmark.hpp"
 #include "utils.hpp"
 #include "sched.hpp"
+#include "third_party/foedus/bernoulli_random.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -374,7 +375,8 @@ void benchmark_t::run() noexcept
                 // Initialize insert id for each thread
                 key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
 
-                auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
+                foedus::assorted::BernoulliRandom random_bool(opt_.latency_sampling,
+                                                              opt_.rnd_seed * (tid + 1));
 
                 #pragma omp barrier
 
@@ -409,7 +411,7 @@ void benchmark_t::run() noexcept
                         key_ptr = key_generator_->hash_id(id);
                     }
 
-                    auto measure_latency = random_bool();
+                    auto measure_latency = random_bool.next();
                     if (measure_latency)
                     {
                         local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
