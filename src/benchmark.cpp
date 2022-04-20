@@ -421,6 +421,10 @@ void benchmark_t::run() noexcept
                     sw.start();
                 }
 
+                constexpr int kFetchStride = 8;
+                uint64_t faa_key = 0;
+                int remain = 0;
+
                 auto execute_op = [&]()
                 {
                     // Generate random operation
@@ -430,7 +434,13 @@ void benchmark_t::run() noexcept
                     const char *key_ptr = nullptr;
                     if (op == operation_t::INSERT)
                     {
-                        key_ptr = key_generator_->fetch_next();
+                        if (remain == 0) {
+                            faa_key = key_generator_->next_id_.fetch_add(kFetchStride);
+                            remain = kFetchStride;
+                        }
+                        key_ptr = key_generator_->hash_id(faa_key);
+                        faa_key++;
+                        remain--;
                     }
                     else
                     {
