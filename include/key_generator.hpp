@@ -5,6 +5,7 @@
 #include "selfsimilar_int_distribution.hpp"
 #include "zipfian_int_distribution.hpp"
 
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -60,6 +61,16 @@ public:
      * @return const char* pointer to beginning of key.
      */
     virtual const char* next(bool in_sequence = false);
+
+    /**
+     * @brief Generate next key from the centralized counter.
+     *
+     * Similar to next(), but only useful when generating keys for insertions
+     * using a centralized counter.
+     *
+     * @return const char* pointer to beginning of key.
+     */
+    virtual const char* fetch_next();
 
     /**
      * @brief Returns total key size (including prefix).
@@ -126,6 +137,9 @@ private:
     const std::string prefix_;
 
     //uint64_t current_id_ = 0;
+
+public:
+    alignas(64) std::atomic<uint64_t> next_id_ = 0;
 };
 
 class uniform_key_generator_t final : public key_generator_t

@@ -34,6 +34,12 @@ const char* key_generator_t::next(bool in_sequence)
     return hash_id(id);
 }
 
+const char* key_generator_t::fetch_next()
+{
+    uint64_t id = next_id_.fetch_add(1, std::memory_order_relaxed);
+    return hash_id(id);
+}
+
 const char* key_generator_t::hash_id(uint64_t id)
 {
     char* ptr = &buf_[prefix_.size()];
