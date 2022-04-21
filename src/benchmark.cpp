@@ -258,6 +258,30 @@ void benchmark_t::load() noexcept
                     exit(1);
                 }
             }
+
+            #pragma omp for schedule(static)
+            for (uint64_t i = 0; i < opt_.num_records; ++i)
+            {
+                // Generate key in sequence
+                auto value_ptr = value_generator_.from_key(i);
+                auto key_ptr = key_generator_->hash_id(i);
+
+                char *values_out = nullptr;
+                int count = tree_->scan(key_ptr, key_generator_->size(), opt_.scan_size, values_out);
+
+                if (!values_out) {
+                    // Maybe scan() is not implemented; just ignore it.
+                    continue;
+                }
+                for (int j = 0; j < count; ++j) {
+                    auto value_ptr = value_generator_.from_key(i + j);
+                    if (memcmp(value_ptr, values_out, opt_.value_size)) {
+                        std::cout << "Error: wrong value found during scan" << std::endl;
+                        exit(1);
+                    }
+                    values_out += opt_.value_size;
+                }
+            }
         }
     }
 
