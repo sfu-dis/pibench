@@ -2,6 +2,7 @@
 #define __UTILS_HPP__
 
 #include <cstdint>
+#include <type_traits>
 
 namespace PiBench
 {
