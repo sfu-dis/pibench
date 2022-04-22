@@ -45,7 +45,8 @@ void key_loader_t::fill_buffer()
             continue;
         else if (line[read - 1] == '\n')        
             line[read - 1] = '\0';
-        this->keys[idx] = new char[read - 1];
+        this->keys[idx] = new char[max_length]; // for now use max length
+        // this->keys[idx] = new char[read - 1];
         memcpy(this->keys[idx], line, read - 1);
         this->key_len[idx] = read - 1;
 	//if (read-1 > max)

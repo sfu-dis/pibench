@@ -47,10 +47,9 @@ private:
     uint64_t get_number_lines(char const *filename);
 
     uint64_t buffer_len;
-    //uint64_t* key_len;
-    // uint64_t key_len = 26;
     char** keys;
     uint16_t* key_len;
+    uint64_t max_length = 26;
 };
 
 
