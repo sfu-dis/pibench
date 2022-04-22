@@ -48,8 +48,9 @@ private:
 
     uint64_t buffer_len;
     //uint64_t* key_len;
-    uint64_t key_len = 26;
+    // uint64_t key_len = 26;
     char** keys;
+    uint16_t* key_len;
 };
 
 
