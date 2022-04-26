@@ -40,6 +40,11 @@ const char* key_generator_t::hash_id(uint64_t id)
 
     uint64_t hashed_id = apply_hash_ ? utils::multiplicative_hash<uint64_t>(id) : id;
 
+    // XXX(shiges): lexicographic order on little-endian machine
+    if (!utils::is_big_endian()) {
+        hashed_id = __builtin_bswap64(hashed_id);
+    }
+
     if (size_ < sizeof(hashed_id))
     {
         // We want key smaller than 8 Bytes, so discard higher bits.
