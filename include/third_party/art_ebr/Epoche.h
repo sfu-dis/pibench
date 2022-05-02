@@ -56,8 +56,6 @@ class ThreadInfo {
 
   ThreadInfo(const ThreadInfo &ti) : epoche(ti.epoche), deletionList(ti.deletionList) {}
 
-  ~ThreadInfo();
-
   Epoche &getEpoche() const;
 };
 
@@ -78,6 +76,8 @@ class Epoche {
 
   void markNodeForDeletion(void *n, ThreadInfo &epocheInfo);
 
+  void exitEpoche(ThreadInfo &info);
+
   void exitEpocheAndCleanup(ThreadInfo &info);
 
   void showDeleteRatio();
@@ -95,12 +95,14 @@ class EpocheGuard {
 };
 
 class EpocheGuardReadonly {
+  ThreadInfo &threadEpocheInfo;
+
  public:
-  EpocheGuardReadonly(ThreadInfo &threadEpocheInfo) {
+  EpocheGuardReadonly(ThreadInfo &threadEpocheInfo) : threadEpocheInfo(threadEpocheInfo) {
     threadEpocheInfo.getEpoche().enterEpoche(threadEpocheInfo);
   }
 
-  ~EpocheGuardReadonly() {}
+  ~EpocheGuardReadonly() { threadEpocheInfo.getEpoche().exitEpoche(threadEpocheInfo); }
 };
 
 inline DeletionList::~DeletionList() {
@@ -165,17 +167,21 @@ inline void Epoche::markNodeForDeletion(void *n, ThreadInfo &epocheInfo) {
   epocheInfo.getDeletionList().thresholdCounter++;
 }
 
+inline void Epoche::exitEpoche(ThreadInfo &epocheInfo) {
+  epocheInfo.getDeletionList().localEpoche.store(std::numeric_limits<uint64_t>::max());
+}
+
 inline void Epoche::exitEpocheAndCleanup(ThreadInfo &epocheInfo) {
   DeletionList &deletionList = epocheInfo.getDeletionList();
   if ((deletionList.thresholdCounter & (64 - 1)) == 1) {
     currentEpoche++;
   }
   if (deletionList.thresholdCounter > startGCThreshhold) {
+    deletionList.localEpoche.store(std::numeric_limits<uint64_t>::max());
     if (deletionList.size() == 0) {
       deletionList.thresholdCounter = 0;
       return;
     }
-    deletionList.localEpoche.store(std::numeric_limits<uint64_t>::max());
 
     uint64_t oldestEpoche = std::numeric_limits<uint64_t>::max();
     for (auto &epoche : deletionLists) {
@@ -200,6 +206,8 @@ inline void Epoche::exitEpocheAndCleanup(ThreadInfo &epocheInfo) {
       cur = next;
     }
     deletionList.thresholdCounter = 0;
+  } else {
+    deletionList.localEpoche.store(std::numeric_limits<uint64_t>::max());
   }
 }
 
@@ -234,10 +242,6 @@ inline void Epoche::showDeleteRatio() {
 
 inline ThreadInfo::ThreadInfo(Epoche &epoche)
     : epoche(epoche), deletionList(epoche.deletionLists.local()) {}
-
-inline ThreadInfo::~ThreadInfo() {
-  deletionList.localEpoche.store(std::numeric_limits<uint64_t>::max());
-}
 
 inline DeletionList &ThreadInfo::getDeletionList() const { return deletionList; }
 
