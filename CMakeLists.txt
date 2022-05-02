@@ -12,6 +12,7 @@ if(COMPILER_SUPPORTS_MARCH_NATIVE)
 endif()
 
 option(PIBENCH_BUILD_LEVELDB "Build LevelDB wrapper" OFF)
+option(PIBENCH_USE_EPOCH_BASED_RECLAMATION "Use Epoch-based Reclamation" ON)
 
 include(CTest)
 

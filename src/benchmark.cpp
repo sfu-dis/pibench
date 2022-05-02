@@ -85,7 +85,8 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
       opt_(opt),
       op_generator_(opt.read_ratio, opt.insert_ratio, opt.update_ratio, opt.remove_ratio, opt.scan_ratio),
       value_generator_(opt.value_size),
-      pcm_(nullptr)
+      pcm_(nullptr),
+      epoch_(opt.epoch_gc_threshold)
 {
     if (opt.enable_pcm)
     {
@@ -185,6 +186,11 @@ void benchmark_t::load() noexcept
             // Initialize insert id for each thread
             key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
 
+#if defined(EPOCH_BASED_RECLAMATION)
+            ART::ThreadInfo t(epoch_);
+            uint32_t epoch_ops_threshold_count = 0;
+            epoch_.enterEpoche(t);
+#endif
             #pragma omp for schedule(static)
             for (uint64_t i = 0; i < opt_.num_records; ++i)
             {
@@ -196,7 +202,18 @@ void benchmark_t::load() noexcept
 
                 auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
                 assert(r);
+
+#if defined(EPOCH_BASED_RECLAMATION)
+                if (++epoch_ops_threshold_count == opt_.epoch_ops_threshold) {
+                    epoch_.exitEpocheAndCleanup(t);
+                    epoch_.enterEpoche(t);
+                    epoch_ops_threshold_count = 0;
+                }
+#endif
             }
+#if defined(EPOCH_BASED_RECLAMATION)
+            epoch_.exitEpocheAndCleanup(t);
+#endif
         }
 
     }
@@ -426,12 +443,25 @@ void benchmark_t::run() noexcept
                     }
                 };
 
+#if defined(EPOCH_BASED_RECLAMATION)
+                ART::ThreadInfo t(epoch_);
+                uint32_t epoch_ops_threshold_count = 0;
+                epoch_.enterEpoche(t);
+#endif
+
                 if (opt_.bm_mode == mode_t::Operation)
                 {
                     #pragma omp for schedule(static)
                     for (uint64_t i = 0; i < opt_.num_ops; ++i)
                     {
                         execute_op();
+#if defined(EPOCH_BASED_RECLAMATION)
+                        if (++epoch_ops_threshold_count == opt_.epoch_ops_threshold) {
+                            epoch_.exitEpocheAndCleanup(t);
+                            epoch_.enterEpoche(t);
+                            epoch_ops_threshold_count = 0;
+                        }
+#endif
                     }
                 }
                 else
@@ -440,9 +470,20 @@ void benchmark_t::run() noexcept
                     do
                     {
                         execute_op();
+#if defined(EPOCH_BASED_RECLAMATION)
+                        if (++epoch_ops_threshold_count == opt_.epoch_ops_threshold) {
+                            epoch_.exitEpocheAndCleanup(t);
+                            epoch_.enterEpoche(t);
+                            epoch_ops_threshold_count = 0;
+                        }
+#endif
                     }
                     while (!finished);
                 }
+
+#if defined(EPOCH_BASED_RECLAMATION)
+                epoch_.exitEpocheAndCleanup(t);
+#endif
 
                 // Get elapsed time and signal monitor thread to finish.
                 #pragma omp single nowait

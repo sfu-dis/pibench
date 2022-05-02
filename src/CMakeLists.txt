@@ -14,6 +14,11 @@ target_link_libraries(pibench PRIVATE
     ${PROJECT_SOURCE_DIR}/pcm/libPCM.a
     dl)
 
+if(PIBENCH_USE_EPOCH_BASED_RECLAMATION)
+  target_compile_options(pibench PUBLIC -DEPOCH_BASED_RECLAMATION)
+  target_link_libraries(pibench PRIVATE tbb)
+endif(PIBENCH_USE_EPOCH_BASED_RECLAMATION)
+
 add_executable(pibench-bin main.cpp)
 target_link_libraries(pibench-bin pibench)
 set_target_properties(pibench-bin PROPERTIES OUTPUT_NAME PiBench)

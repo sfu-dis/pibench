@@ -13,6 +13,10 @@
 #include <chrono> // std::chrono::high_resolution_clock::time_point
 #include <vector>
 
+#if defined(EPOCH_BASED_RECLAMATION)
+#include "third_party/art_ebr/Epoche.h"
+#endif
+
 namespace PiBench
 {
 
@@ -119,6 +123,12 @@ struct options_t
 
     /// Experiment mode
     mode_t bm_mode = mode_t::Operation;
+
+    /// Number of operations before exiting/re-entering epochs
+    uint32_t epoch_ops_threshold = 1024;
+
+    /// Number of deletions before performing garbage collection
+    uint32_t epoch_gc_threshold = 256;
 
     /// Whether to use perf for profiling.
     bool enable_perf = false;
@@ -239,6 +249,11 @@ private:
 
     /// Intel PCM handler.
     PCM* pcm_;
+
+#if defined(EPOCH_BASED_RECLAMATION)
+    /// Epoch manager
+    ART::Epoche epoch_;
+#endif
 };
 } // namespace PiBench
 

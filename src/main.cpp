@@ -52,6 +52,8 @@ int main(int argc, char** argv)
             ("latency_sampling", "Sample latency of requests", cxxopts::value<float>()->default_value(std::to_string(opt.latency_sampling)))
             ("m,mode","Benchmark mode",cxxopts::value<std::string>()->default_value("operation"))
             ("seconds","Time (seconds) PiBench run in time-based mode",cxxopts::value<float>()->default_value(std::to_string(opt.seconds)))
+            ("epoch_ops_threshold","Number of operations before exiting/re-entering epochs",cxxopts::value<uint32_t>()->default_value(std::to_string(opt.epoch_ops_threshold)))
+            ("epoch_gc_threshold","Number of deletions before performing garbage collection",cxxopts::value<uint32_t>()->default_value(std::to_string(opt.epoch_gc_threshold)))
             ("enable_perf", "Enable perf", cxxopts::value<bool>()->default_value((opt.enable_perf ? "true" : "false")))
             ("perf_record_args", "Arguments to perf-record", cxxopts::value<std::string>()->default_value(""))
             ("help", "Print help")
@@ -234,6 +236,14 @@ int main(int argc, char** argv)
         // Parse "seconds"
         if (result.count("seconds"))
             opt.seconds = result["seconds"].as<float>();
+
+        // Parse "epoch_ops_threshold"
+        if (result.count("epoch_ops_threshold"))
+            opt.epoch_ops_threshold = result["epoch_ops_threshold"].as<uint32_t>();
+
+        // Parse "epoch_gc_threshold"
+        if (result.count("epoch_gc_threshold"))
+            opt.epoch_gc_threshold = result["epoch_gc_threshold"].as<uint32_t>();
 
         // Parse "enable_perf"
         if (result.count("enable_perf"))
