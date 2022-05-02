@@ -3,6 +3,8 @@
 
 #include <array>
 #include <atomic>
+#include <cassert>
+#include <iostream>
 
 #include "tbb/combinable.h"
 #include "tbb/enumerable_thread_specific.h"
