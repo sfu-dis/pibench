@@ -253,6 +253,13 @@ private:
 #if defined(EPOCH_BASED_RECLAMATION)
     /// Epoch manager
     ART::Epoche epoch_;
+
+public:
+    ART::Epoche& getEpoch() { return epoch_; }
+
+    void setTree(tree_api *tree) { tree_ = tree; }
+
+private:
 #endif
 };
 } // namespace PiBench

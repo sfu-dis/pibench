@@ -85,8 +85,10 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
       opt_(opt),
       op_generator_(opt.read_ratio, opt.insert_ratio, opt.update_ratio, opt.remove_ratio, opt.scan_ratio),
       value_generator_(opt.value_size),
-      pcm_(nullptr),
-      epoch_(opt.epoch_gc_threshold)
+      pcm_(nullptr)
+#if defined(EPOCH_BASED_RECLAMATION)
+      , epoch_(opt.epoch_gc_threshold)
+#endif
 {
     if (opt.enable_pcm)
     {

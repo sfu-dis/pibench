@@ -337,6 +337,11 @@ int main(int argc, char** argv)
     tree_opt.num_threads = opt.num_threads;
 
     library_loader_t lib(opt.library_file);
+
+#if defined(EPOCH_BASED_RECLAMATION)
+    benchmark_t bench(nullptr, opt);
+    tree_opt.data = reinterpret_cast<void *>(&bench.getEpoch());
+#endif
     tree_api* tree = lib.create_tree(tree_opt);
     if(tree == nullptr)
     {
@@ -344,7 +349,11 @@ int main(int argc, char** argv)
         exit(1);
     }
 
+#if defined(EPOCH_BASED_RECLAMATION)
+    bench.setTree(tree);
+#else
     benchmark_t bench(tree, opt);
+#endif
     bench.load();
     bench.run();
 
