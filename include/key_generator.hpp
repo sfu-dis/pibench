@@ -133,7 +133,7 @@ class uniform_key_generator_t final : public key_generator_t
 public:
     uniform_key_generator_t(size_t N, size_t size, bool apply_hash = true,
                             const std::string& prefix = "")
-        : dist_(1, N),
+        : dist_(0, N - 1),
           key_generator_t(N, size, apply_hash, prefix) {}
 
 protected:
@@ -151,7 +151,7 @@ class selfsimilar_key_generator_t final : public key_generator_t
 public:
     selfsimilar_key_generator_t(size_t N, size_t size, bool apply_hash = true,
                                 const std::string& prefix = "", float skew = 0.2)
-        : dist_(1, N, skew),
+        : dist_(0, N - 1, skew),
           key_generator_t(N, size, apply_hash, prefix)
     {
     }
@@ -170,7 +170,7 @@ class zipfian_key_generator_t final : public key_generator_t
 public:
     zipfian_key_generator_t(size_t N, size_t size, bool apply_hash = true,
                             const std::string& prefix = "", float skew = 0.99)
-        : dist_(1, N, skew),
+        : dist_(0, N - 1, skew),
           key_generator_t(N, size, apply_hash, prefix)
     {
     }
