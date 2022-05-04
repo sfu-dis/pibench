@@ -1,5 +1,6 @@
 #include "key_generator.hpp"
 #include "utils.hpp"
+#include <iostream>
 
 namespace PiBench
 {
@@ -24,12 +25,12 @@ const char* key_generator_t::next(bool in_sequence)
     uint64_t id = -1;
     if (in_sequence)
     {
-      id = current_id_++;
+      id = 2 * current_id_++;
     }
     else
     {
       //if opt_.bm_mode == mode_t::Operation  
-      id = next_id();
+      id = 2 * next_id() + 1;
     }
     return hash_id(id);
 }

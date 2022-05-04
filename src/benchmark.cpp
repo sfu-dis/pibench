@@ -428,6 +428,7 @@ void benchmark_t::run() noexcept
                                 id = opt_.num_records + inserts_per_thread * (ins / local_stats[tid].success_insert_count) + ins % local_stats[tid].success_insert_count;
                             }
                         }
+			id = id * 2 + 1;
                         key_ptr = key_generator_->hash_id(id);
                     }
 
