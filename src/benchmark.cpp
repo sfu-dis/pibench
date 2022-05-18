@@ -8,6 +8,7 @@
 #include <iostream>
 #include <omp.h>
 #include <functional> // std::bind
+#include <iterator>
 #include <cmath>      // std::ceil
 #include <ctime>
 #include <fstream>
