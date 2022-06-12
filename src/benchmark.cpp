@@ -137,53 +137,44 @@ void benchmark_t::load() noexcept
     stopwatch_t sw;
     sw.start();
 
-    {
-        #pragma omp parallel num_threads(opt_.num_threads)
-        {
-            // Initialize insert id for each thread
-            key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
-
-            #pragma omp for schedule(static)
-            for (uint64_t i = 0; i < opt_.num_records; ++i)
-            {
-                // Generate key in sequence
-                auto key_ptr = key_generator_->next(true);
-
-                // Generate random value
-                auto value_ptr = value_generator_.next();
-
-                auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
-                assert(r);
-            }
-        }
-
-    }
+    PiBench::utils::parallelForLoop(
+        opt_.num_threads,
+        [this](uint64_t threadNum) {
+          // Initialize insert id for each thread
+          key_generator_->current_id_ =
+              opt_.num_records / opt_.num_threads * threadNum;
+        },
+        [this](uint64_t threadNum) {
+          // Generate key in sequence
+          auto key_ptr = key_generator_->next(true);
+          // Generate random value
+          auto value_ptr = value_generator_.next();
+          auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr,
+                                 opt_.value_size);
+          assert(r);
+        },
+        opt_.num_records);
 
     auto elapsed = sw.elapsed<std::chrono::milliseconds>();
 
-    std::cout << "Loading finished in " << elapsed << " milliseconds" << std::endl;
+    std::cout << "Loading finished in " << elapsed << " milliseconds"
+              << std::endl;
 
-    // Verify all keys can be found
-    {
-        #pragma omp parallel num_threads(opt_.num_threads)
-        {
-            // Initialize insert id for each thread
-            auto id = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+    PiBench::utils::parallelForLoop(
+        opt_.num_threads, [](uint64_t) {},
+        [this](uint64_t threadNum) {
+          // Initialize insert id for each thread
+          auto id = opt_.num_records / opt_.num_threads * threadNum;
+          // Generate key in sequence
+          auto key_ptr = key_generator_->hash_id(id++);
 
-            #pragma omp for schedule(static)
-            for (uint64_t i = 0; i < opt_.num_records; ++i)
-            {
-                // Generate key in sequence
-                auto key_ptr = key_generator_->hash_id(id++);
-
-                static thread_local char value_out[value_generator_t::VALUE_MAX];
-                bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
-                if (!found) {
-                    exit(1);
-                }
-            }
-        }
-    }
+          static thread_local char value_out[value_generator_t::VALUE_MAX];
+          bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
+          if (!found) {
+            exit(1);
+          }
+        },
+        opt_.num_records);
 
     std::cout << "Load verified; benchmark started." << std::endl;
 }
