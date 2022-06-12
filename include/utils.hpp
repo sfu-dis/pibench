@@ -1,7 +1,13 @@
 #ifndef __UTILS_HPP__
 #define __UTILS_HPP__
 
+#include <condition_variable>
 #include <cstdint>
+#include <functional>
+#include <iostream>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 namespace PiBench
 {
@@ -150,6 +156,110 @@ namespace utils
             asm volatile("" : : "g"(vptr) : "memory");
         }
     }
+
+    /**
+     * @brief implements a thread barrier
+     */
+    class barrier {
+    public:
+      /**
+       * @brief Construct a new barrier object
+       *
+       * @param Threshold threshold of the barrier
+       */
+      explicit barrier(std::uint64_t Threshold)
+          : threshold(Threshold), capacity(Threshold) {}
+
+      /**
+       * @brief 'holds' the threads untill specified number of threads arrive at
+       * the barrier. releases waiting threads at the same time.
+       */
+      void arriveAndWait() {
+        std::unique_lock<std::mutex> lock(mtx);
+        uint64_t localGeneration = generation;
+        capacity--;
+
+        if (capacity == 0) {
+          generation++;
+          capacity = threshold;
+          cv.notify_all();
+        } else {
+          cv.wait(lock, [this, localGeneration] {
+            return localGeneration != generation;
+          });
+        }
+      }
+
+    private:
+      std::uint64_t threshold;
+      std::uint64_t capacity;
+      // used for preventing spurious wakeups
+      std::uint64_t generation = 0;
+      std::mutex mtx;
+      std::condition_variable cv;
+    };
+
+    /**
+     * @brief performs mathematical divison operation
+     *
+     * @param dividend dividend
+     * @param divisor divisor
+     * @return std::pair<uint64_t, uint64_t> pair containing quotient &
+     * remainder respectively
+     */
+    inline std::pair<uint64_t, uint64_t> divide(const uint64_t dividend,
+                                                const uint64_t divisor) {
+      return {dividend / divisor, dividend % divisor};
+    };
+
+    /**
+     * @brief runs a for loop parallelly. the work load is equally divided among
+     * spcified number of threads.
+     *
+     * @param threadNum number of threads that should spawned for the workload
+     * @param preLoopTask this function is called right before the loop is
+     * executed
+     * @param task this function is called in the for loop
+     * @param iterations number of iterations for loop should perform
+     */
+    inline void
+    parallelForLoop(const uint64_t threadNum,
+                    const std::function<void(uint64_t)> &preLoopTask,
+                    const std::function<void(uint64_t)> &task,
+                    const uint64_t iterations) {
+      std::vector<std::thread> threads;
+      barrier barr(threadNum);
+      const auto partitionedIterations = divide(iterations, threadNum);
+
+      for (uint64_t j = 0; j < threadNum; j++) {
+        threads.emplace_back(std::thread([&, partitionedIterations, j]() {
+          uint64_t localThreadId = j + 1;
+          barr.arriveAndWait();
+
+          uint64_t threadLoad = j == 0 ? partitionedIterations.first +
+                                             partitionedIterations.second
+                                       : partitionedIterations.first;
+          try {
+            preLoopTask(localThreadId);
+          } catch (std::exception &ex) {
+            std::cerr << "exception thrown in the pre-loop task: " << ex.what()
+                      << '\n';
+          };
+          for (uint64_t i = 0; i < threadLoad; i++) {
+            try {
+              task(localThreadId);
+            } catch (std::exception &ex) {
+              std::cerr << "exception thrown in the task: " << ex.what()
+                        << '\n';
+            };
+          };
+        }));
+      };
+
+      for (auto &i : threads) {
+        i.join();
+      };
+    };
 } // namespace utils
 } // namespace PiBench
 #endif
