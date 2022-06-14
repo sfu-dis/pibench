@@ -3,14 +3,15 @@
 
 #include <algorithm>
 #include <cassert>
-#include <iostream>
-#include <omp.h>
-#include <functional> // std::bind
-#include <cmath>      // std::ceil
+#include <cmath> // std::ceil
 #include <ctime>
 #include <fstream>
-#include <regex>            // std::regex_replace
-#include <sys/utsname.h>    // uname
+#include <functional> // std::bind
+#include <iostream>
+#include <mutex>
+#include <omp.h>
+#include <regex>         // std::regex_replace
+#include <sys/utsname.h> // uname
 
 namespace PiBench
 {
@@ -252,11 +253,8 @@ void benchmark_t::run() noexcept
       uint64_t threadNum = opt_.num_threads;
       std::vector<std::thread> threads;
       PiBench::utils::barrier barrier(threadNum);
-      PiBench::utils::executeOnce startTimer([&]() { sw.start(); });
-      PiBench::utils::executeOnce stopTimerAndExit([&]() {
-        elapsed = sw.elapsed<std::chrono::milliseconds>();
-        finished = true;
-      });
+      std::once_flag onceFlag1;
+      std::once_flag onceFlag2;
 
       // calculate 'for loop' iteration distribution for each thread
       std::vector<uint64_t> threadOpsLoads(threadNum);
@@ -278,7 +276,7 @@ void benchmark_t::run() noexcept
             std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
 
         barrier.arriveAndWait();
-        startTimer();
+        std::call_once(onceFlag1, [&]() { sw.start(); });
 
         auto execute_op = [&]() {
           // Generate random operation
@@ -332,7 +330,10 @@ void benchmark_t::run() noexcept
         }
 
         // Get elapsed time and signal monitor thread to finish.
-        stopTimerAndExit();
+        std::call_once(onceFlag2, [&]() {
+          elapsed = sw.elapsed<std::chrono::milliseconds>();
+          finished = true;
+        });
       };
 
       for (uint64_t i = 0; i < threadNum; i++) {

@@ -261,24 +261,6 @@ namespace utils
         i.join();
       };
     };
-
-    class executeOnce {
-      using task_t = std::function<void()>;
-
-    public:
-      executeOnce(const task_t &Task) : task(Task) {}
-
-      void operator()() {
-        if (!executed) {
-          executed = true;
-          task();
-        };
-      };
-
-    private:
-      task_t task;
-      std::atomic<bool> executed = false;
-    };
 } // namespace utils
 } // namespace PiBench
 #endif
