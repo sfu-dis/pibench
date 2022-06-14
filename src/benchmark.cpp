@@ -9,7 +9,6 @@
 #include <functional> // std::bind
 #include <iostream>
 #include <mutex>
-#include <omp.h>
 #include <regex>         // std::regex_replace
 #include <sys/utsname.h> // uname
 

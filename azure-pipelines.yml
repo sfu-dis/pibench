@@ -46,13 +46,13 @@ jobs:
       Clang-6.0 Debug:
         CC: clang-6.0
         CXX: clang++-6.0
-        Packages: clang-6.0 libomp5 libomp-dev
+        Packages: clang-6.0
         BuildType: Debug
 
       Clang-6.0 Release:
         CC: clang-6.0
         CXX: clang++-6.0
-        Packages: clang-6.0 libomp5 libomp-dev
+        Packages: clang-6.0
         BuildType: Release
 
   steps:
