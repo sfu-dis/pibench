@@ -1,6 +1,7 @@
 #ifndef __UTILS_HPP__
 #define __UTILS_HPP__
 
+#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
@@ -233,7 +234,7 @@ namespace utils
 
       for (uint64_t j = 0; j < threadNum; j++) {
         threads.emplace_back(std::thread([&, partitionedIterations, j]() {
-          uint64_t localThreadId = j + 1;
+          uint64_t localThreadId = j;
           barr.arriveAndWait();
 
           uint64_t threadLoad = j == 0 ? partitionedIterations.first +
@@ -259,6 +260,24 @@ namespace utils
       for (auto &i : threads) {
         i.join();
       };
+    };
+
+    class executeOnce {
+      using task_t = std::function<void()>;
+
+    public:
+      executeOnce(const task_t &Task) : task(Task) {}
+
+      void operator()() {
+        if (!executed) {
+          executed = true;
+          task();
+        };
+      };
+
+    private:
+      task_t task;
+      std::atomic<bool> executed = false;
     };
 } // namespace utils
 } // namespace PiBench
