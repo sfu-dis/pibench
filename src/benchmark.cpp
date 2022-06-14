@@ -220,131 +220,131 @@ void benchmark_t::run() noexcept
 
     double elapsed = 0.0;
     stopwatch_t sw;
-    omp_set_nested(true);
-    #pragma omp parallel sections num_threads(2)
-    {
-        #pragma omp section // Monitor thread
-        {
-            std::chrono::milliseconds sampling_window(opt_.sampling_ms);
-            auto sample_stats = [&]()
-            {
-                std::this_thread::sleep_for(sampling_window);
-                stats_t s;
-                s.operation_count = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
-                                                    [](uint64_t sum, const stats_t& curr) {
-                                                        return sum + curr.operation_count;
-                                                    });
-                global_stats.push_back(std::move(s));
-            };
 
-            if (opt_.bm_mode == mode_t::Operation)
-            {
-                while (!finished)
-                {
-                    sample_stats();
-                }
+    std::thread monitorThread([&]() {
+      std::chrono::milliseconds sampling_window(opt_.sampling_ms);
+      auto sample_stats = [&]() {
+        std::this_thread::sleep_for(sampling_window);
+        stats_t s;
+        s.operation_count =
+            std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                            [](uint64_t sum, const stats_t &curr) {
+                              return sum + curr.operation_count;
+                            });
+        global_stats.push_back(std::move(s));
+      };
+
+      if (opt_.bm_mode == mode_t::Operation) {
+        while (!finished) {
+          sample_stats();
+        }
+      } else {
+        uint32_t iterations = opt_.seconds * 1000 / opt_.sampling_ms;
+        uint32_t slept = 0;
+        do {
+          sample_stats();
+        } while (++slept < iterations);
+        finished = true;
+      }
+    });
+
+    std::thread workerThread([&]() {
+      uint64_t threadNum = opt_.num_threads;
+      std::vector<std::thread> threads;
+      PiBench::utils::barrier barrier(threadNum);
+      PiBench::utils::executeOnce startTimer([&]() { sw.start(); });
+      PiBench::utils::executeOnce stopTimerAndExit([&]() {
+        elapsed = sw.elapsed<std::chrono::milliseconds>();
+        finished = true;
+      });
+
+      // calculate 'for loop' iteration distribution for each thread
+      std::vector<uint64_t> threadOpsLoads(threadNum);
+      auto loadDivision = PiBench::utils::divide(opt_.num_ops, threadNum);
+      threadOpsLoads.at(0) = loadDivision.first + loadDivision.second;
+      std::fill(threadOpsLoads.begin() + 1, threadOpsLoads.end(),
+                loadDivision.first);
+
+      const auto workerTask = [&, threadNum](uint64_t i) {
+        auto tid = i;
+
+        // Initialize random seed for each thread
+        key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
+
+        // Initialize insert id for each thread
+        key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
+
+        auto random_bool = std::bind(
+            std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
+
+        barrier.arriveAndWait();
+        startTimer();
+
+        auto execute_op = [&]() {
+          // Generate random operation
+          auto op = op_generator_.next();
+
+          // Generate random scrambled key
+          const char *key_ptr = nullptr;
+          if (op == operation_t::INSERT) {
+            key_ptr = key_generator_->next(true);
+          } else {
+            auto id = key_generator_->next_id();
+            if (opt_.bm_mode == mode_t::Time) {
+              // Scale back to insert amount
+              id %= (local_stats[tid].success_insert_count * opt_.num_threads +
+                     opt_.num_records);
+              if (id >= opt_.num_records) {
+                uint64_t ins = id - opt_.num_records;
+                id = opt_.num_records +
+                     inserts_per_thread *
+                         (ins / local_stats[tid].success_insert_count) +
+                     ins % local_stats[tid].success_insert_count;
+              }
             }
-            else
-            {
-                uint32_t iterations = opt_.seconds * 1000 / opt_.sampling_ms;
-                uint32_t slept = 0;
-                do {
-                    sample_stats();
-                }
-                while (++slept < iterations);
-                finished = true;
-            }
+            key_ptr = key_generator_->hash_id(id);
+          }
+
+          auto measure_latency = random_bool();
+          if (measure_latency) {
+            local_stats[tid].times.push_back(
+                std::chrono::high_resolution_clock::now());
+          }
+
+          run_op(op, key_ptr, value_out, values_out, measure_latency,
+                 local_stats[tid]);
+
+          if (measure_latency) {
+            local_stats[tid].times.push_back(
+                std::chrono::high_resolution_clock::now());
+          }
+        };
+
+        if (opt_.bm_mode == mode_t::Operation) {
+          for (int j = 0; j < threadOpsLoads[i]; j++) {
+            execute_op();
+          };
+        } else {
+          uint32_t slept = 0;
+          do {
+            execute_op();
+          } while (!finished);
         }
 
-        #pragma omp section // Worker threads
-        {
-            #pragma omp parallel num_threads(opt_.num_threads)
-            {
-                auto tid = omp_get_thread_num();
+        // Get elapsed time and signal monitor thread to finish.
+        stopTimerAndExit();
+      };
 
-                // Initialize random seed for each thread
-                key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
+      for (uint64_t i = 0; i < threadNum; i++) {
+        threads.emplace_back(std::thread(workerTask, i));
+      };
+      for (auto &i : threads) {
+        i.join();
+      };
+    });
 
-                // Initialize insert id for each thread
-                key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
-
-                auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
-
-                #pragma omp barrier
-
-                #pragma omp single nowait
-                {
-                    sw.start();
-                }
-
-                auto execute_op = [&]()
-                {
-                    // Generate random operation
-                    auto op = op_generator_.next();
-
-                    // Generate random scrambled key
-                    const char *key_ptr = nullptr;
-                    if (op == operation_t::INSERT)
-                    {
-                        key_ptr = key_generator_->next(true);
-                    }
-                    else
-                    {
-                        auto id = key_generator_->next_id();
-                        if (opt_.bm_mode == mode_t::Time)
-                        {
-                            // Scale back to insert amount
-                            id %= (local_stats[tid].success_insert_count * opt_.num_threads + opt_.num_records);
-                            if (id >= opt_.num_records) {
-                                uint64_t ins = id - opt_.num_records;
-                                id = opt_.num_records + inserts_per_thread * (ins / local_stats[tid].success_insert_count) + ins % local_stats[tid].success_insert_count;
-                            }
-                        }
-                        key_ptr = key_generator_->hash_id(id);
-                    }
-
-                    auto measure_latency = random_bool();
-                    if (measure_latency)
-                    {
-                        local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
-                    }
-
-                    run_op(op, key_ptr, value_out, values_out, measure_latency, local_stats[tid]);
-
-                    if (measure_latency)
-                    {
-                        local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
-                    }
-                };
-
-                if (opt_.bm_mode == mode_t::Operation)
-                {
-                    #pragma omp for schedule(static)
-                    for (uint64_t i = 0; i < opt_.num_ops; ++i)
-                    {
-                        execute_op();
-                    }
-                }
-                else
-                {
-                    uint32_t slept = 0;
-                    do
-                    {
-                        execute_op();
-                    }
-                    while (!finished);
-                }
-
-                // Get elapsed time and signal monitor thread to finish.
-                #pragma omp single nowait
-                {
-                    elapsed = sw.elapsed<std::chrono::milliseconds>();
-                    finished = true;
-                }
-            }
-        }
-    }
-    omp_set_nested(false);
+    monitorThread.join();
+    workerThread.join();
 
     std::unique_ptr<SystemCounterState> after_sstate;
     if (opt_.enable_pcm)
