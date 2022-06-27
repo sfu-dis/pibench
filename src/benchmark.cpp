@@ -138,7 +138,7 @@ void benchmark_t::load() noexcept
     sw.start();
 
     PiBench::utils::parallelForLoop(
-        opt_.num_threads,
+        opt_.num_threads, opt_.cores,
         [this](uint64_t threadNum) {
           // Initialize insert id for each thread
           key_generator_->current_id_ =
@@ -161,7 +161,7 @@ void benchmark_t::load() noexcept
               << std::endl;
 
     PiBench::utils::parallelForLoop(
-        opt_.num_threads, [](uint64_t) {},
+        opt_.num_threads, opt_.cores, [](uint64_t) {},
         [this](uint64_t threadNum) {
           // Initialize insert id for each thread
           auto id = opt_.num_records / opt_.num_threads * threadNum;
@@ -220,8 +220,9 @@ void benchmark_t::run() noexcept
 
     double elapsed = 0.0;
     stopwatch_t sw;
+    auto monitorThreadTask = [&]() {
+      PiBench::utils::setAffinity(opt_.cores);
 
-    std::thread monitorThread([&]() {
       std::chrono::milliseconds sampling_window(opt_.sampling_ms);
       auto sample_stats = [&]() {
         std::this_thread::sleep_for(sampling_window);
@@ -246,9 +247,10 @@ void benchmark_t::run() noexcept
         } while (++slept < iterations);
         finished = true;
       }
-    });
+    };
+    auto workerThreadTask = [&]() {
+      PiBench::utils::setAffinity(opt_.cores);
 
-    std::thread workerThread([&]() {
       uint64_t threadNum = opt_.num_threads;
       std::vector<std::thread> threads;
       PiBench::utils::barrier barrier(threadNum);
@@ -263,6 +265,7 @@ void benchmark_t::run() noexcept
                 loadDivision.first);
 
       const auto workerTask = [&, threadNum](uint64_t i) {
+        PiBench::utils::setAffinity(opt_.cores);
         auto tid = i;
 
         // Initialize random seed for each thread
@@ -341,8 +344,10 @@ void benchmark_t::run() noexcept
       for (auto &i : threads) {
         i.join();
       };
-    });
+    };
 
+    std::thread monitorThread(monitorThreadTask);
+    std::thread workerThread(workerThreadTask);
     monitorThread.join();
     workerThread.join();
 

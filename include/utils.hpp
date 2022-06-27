@@ -2,6 +2,7 @@
 #define __UTILS_HPP__
 
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
@@ -214,6 +215,38 @@ namespace utils
     };
 
     /**
+     * @brief get id of current thread
+     *
+     * @return uint32_t thread id
+     */
+    inline uint32_t getThreadId() {
+      return std::hash<std::thread::id>{}(std::this_thread::get_id());
+    }
+
+    /**
+     * @brief set affinity of a thread
+     *
+     * @param cores list of CPU cores that should be considered for pinning the
+     * thread
+     * @param threadId id of the thread to pin
+     * @return true if affinity set successfully
+     * @return false if failed to set affinity
+     */
+    inline bool setAffinity(const std::vector<uint32_t> &cores,
+                            uint32_t threadId = getThreadId()) {
+      if (cores.empty()) {
+        return false;
+      };
+
+      int myCpuId = cores[threadId % cores.size()];
+      cpu_set_t mySet;
+      CPU_ZERO(&mySet);
+      CPU_SET(myCpuId, &mySet);
+      sched_setaffinity(0, sizeof(cpu_set_t), &mySet);
+      return true;
+    }
+
+    /**
      * @brief runs a for loop parallelly. the work load is equally divided among
      * spcified number of threads.
      *
@@ -223,17 +256,17 @@ namespace utils
      * @param task this function is called in the for loop
      * @param iterations number of iterations for loop should perform
      */
-    inline void
-    parallelForLoop(const uint64_t threadNum,
-                    const std::function<void(uint64_t)> &preLoopTask,
-                    const std::function<void(uint64_t)> &task,
-                    const uint64_t iterations) {
+    inline void parallelForLoop(
+        const uint64_t threadNum, const std::vector<uint32_t> &cores,
+        const std::function<void(uint64_t)> &preLoopTask,
+        const std::function<void(uint64_t)> &task, const uint64_t iterations) {
       std::vector<std::thread> threads;
       barrier barr(threadNum);
       const auto partitionedIterations = divide(iterations, threadNum);
 
       for (uint64_t j = 0; j < threadNum; j++) {
         threads.emplace_back(std::thread([&, partitionedIterations, j]() {
+          setAffinity(cores);
           uint64_t localThreadId = j;
           barr.arriveAndWait();
 

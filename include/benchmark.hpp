@@ -56,6 +56,9 @@ struct options_t
     /// Number of parallel threads used for executing requests.
     uint32_t num_threads = 1;
 
+    // Cores threads should be pinned to.
+    std::vector<uint32_t> cores = {};
+
     /// Sampling window in milliseconds.
     uint32_t sampling_ms = 1000;
 

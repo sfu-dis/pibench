@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cerrno>
+#include <string>
 
 #include <dlfcn.h>
 
@@ -29,6 +30,7 @@ int main(int argc, char** argv)
             ("n,records", "Number of records to load", cxxopts::value<uint64_t>()->default_value(std::to_string(opt.num_records)))
             ("p,operations", "Number of operations to execute", cxxopts::value<uint64_t>()->default_value(std::to_string(opt.num_ops)))
             ("t,threads", "Number of threads to use", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.num_threads)))
+            ("c,cores", "Cores threads should be pinned to", cxxopts::value<std::string>()->default_value(""))
             ("f,key_prefix", "Prefix string prepended to every key", cxxopts::value<std::string>()->default_value("\"" + opt.key_prefix + "\""))
             ("k,key_size", "Size of keys in Bytes (without prefix)", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.key_size)))
             ("v,value_size", "Size of values in Bytes", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.value_size)))
@@ -94,6 +96,21 @@ int main(int argc, char** argv)
         // Parse "num_threads"
         if (result.count("threads"))
             opt.num_threads = result["threads"].as<uint32_t>();
+
+        // Parse "cores".
+        if (result.count("cores")) {
+          std::string cores = result["cores"].as<std::string>();
+
+          size_t last = 0;
+          size_t next = 0;
+          while ((next = cores.find(',', last)) != std::string::npos) {
+            opt.cores.emplace_back(static_cast<uint32_t>(
+                std::stoul(cores.substr(last, next - last))));
+            last = next + 1;
+          }
+          opt.cores.emplace_back(
+              static_cast<uint32_t>(std::stoul(cores.substr(last))));
+        }
 
         // Parse "sampling_ms"
         if (result.count("sampling_ms"))
