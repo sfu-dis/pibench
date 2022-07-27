@@ -14,7 +14,7 @@ Lucas Lersch, Xiangpeng Hao, Ismail Oukid, Tianzheng Wang, Thomas Willhalm:
 Evaluating Persistent Memory Range Indexes. PVLDB 13(4): 574-587 (2019)
 ````
 
-***New!*** Check out the sequel of this evaluation that includes newer PM range indexes and more insights! [[code]](https://github.com/sfu-dis/pibench-ep2) [[VLDB 2022 preprint]](https://arxiv.org/pdf/2201.13047.pdf)
+***New!*** Check out the sequel of this evaluation that includes newer PM range indexes and more insights! [[code]](https://github.com/sfu-dis/pibench-ep2) [[VLDB 2022 paper]](https://www.cs.sfu.ca/~tzwang/pibench-ep2.pdf)
 
 Check out [**PiBench Online**](http://pibench.org) for an online demo of PiBench! Code is available [here](https://github.com/sfu-dis/pibench-online) to deploy your own.
 
