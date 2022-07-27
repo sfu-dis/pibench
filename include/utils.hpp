@@ -10,6 +10,9 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <algorithm>
+#include <sstream>
+#include <iterator>
 
 namespace PiBench
 {
@@ -223,17 +226,18 @@ namespace utils
       return std::hash<std::thread::id>{}(std::this_thread::get_id());
     }
 
+    //! cores threads should be pinned to. is in utils & not in `opt` to make
+    //! it easier to call `setAffinity` from outside of PiBench.
+    inline std::vector<uint32_t> cores;
+
     /**
      * @brief set affinity of a thread
      *
-     * @param cores list of CPU cores that should be considered for pinning the
-     * thread
      * @param threadId id of the thread to pin
      * @return true if affinity set successfully
      * @return false if failed to set affinity
      */
-    inline bool setAffinity(const std::vector<uint32_t> &cores,
-                            uint32_t threadId = getThreadId()) {
+    inline bool setAffinity(uint32_t threadId = getThreadId()) {
       if (cores.empty()) {
         return false;
       };
@@ -266,7 +270,7 @@ namespace utils
 
       for (uint64_t j = 0; j < threadNum; j++) {
         threads.emplace_back(std::thread([&, partitionedIterations, j]() {
-          setAffinity(cores);
+          setAffinity();
           uint64_t localThreadId = j;
           barr.arriveAndWait();
 
@@ -294,6 +298,24 @@ namespace utils
         i.join();
       };
     };
+
+
+  /**
+   * @brief stringify a vector
+   * 
+   * @tparam T underlying type of vector
+   * @param vec vector to stringify
+   * @return std::string string representation with `,` as delimiter
+   */
+  template <class T>
+  std::string stringify(const std::vector<T>& vec){
+    if(vec.empty()){ return {}; };
+
+    std::ostringstream oss;
+    std::copy(vec.begin(), vec.end() - 1, std::ostream_iterator<T>(oss, ","));
+    oss << vec.back();
+    return oss.str();
+  }
 } // namespace utils
 } // namespace PiBench
 #endif

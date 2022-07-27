@@ -2,6 +2,7 @@
 #include "benchmark.hpp"
 #include "library_loader.hpp"
 #include "cxxopts.hpp"
+#include "utils.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -104,11 +105,11 @@ int main(int argc, char** argv)
           size_t last = 0;
           size_t next = 0;
           while ((next = cores.find(',', last)) != std::string::npos) {
-            opt.cores.emplace_back(static_cast<uint32_t>(
+            PiBench::utils::cores.emplace_back(static_cast<uint32_t>(
                 std::stoul(cores.substr(last, next - last))));
             last = next + 1;
           }
-          opt.cores.emplace_back(
+          PiBench::utils::cores.emplace_back(
               static_cast<uint32_t>(std::stoul(cores.substr(last))));
         }
 

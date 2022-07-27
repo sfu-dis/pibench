@@ -138,7 +138,7 @@ void benchmark_t::load() noexcept
     sw.start();
 
     PiBench::utils::parallelForLoop(
-        opt_.num_threads, opt_.cores,
+        opt_.num_threads, PiBench::utils::cores,
         [this](uint64_t threadNum) {
           // Initialize insert id for each thread
           key_generator_->current_id_ =
@@ -161,7 +161,7 @@ void benchmark_t::load() noexcept
               << std::endl;
 
     PiBench::utils::parallelForLoop(
-        opt_.num_threads, opt_.cores, [](uint64_t) {},
+        opt_.num_threads, PiBench::utils::cores, [](uint64_t) {},
         [this](uint64_t threadNum) {
           // Initialize insert id for each thread
           auto id = opt_.num_records / opt_.num_threads * threadNum;
@@ -221,7 +221,7 @@ void benchmark_t::run() noexcept
     double elapsed = 0.0;
     stopwatch_t sw;
     auto monitorThreadTask = [&]() {
-      PiBench::utils::setAffinity(opt_.cores);
+      PiBench::utils::setAffinity();
 
       std::chrono::milliseconds sampling_window(opt_.sampling_ms);
       auto sample_stats = [&]() {
@@ -249,7 +249,7 @@ void benchmark_t::run() noexcept
       }
     };
     auto workerThreadTask = [&]() {
-      PiBench::utils::setAffinity(opt_.cores);
+      PiBench::utils::setAffinity();
 
       uint64_t threadNum = opt_.num_threads;
       std::vector<std::thread> threads;
@@ -265,7 +265,7 @@ void benchmark_t::run() noexcept
                 loadDivision.first);
 
       const auto workerTask = [&, threadNum](uint64_t i) {
-        PiBench::utils::setAffinity(opt_.cores);
+        PiBench::utils::setAffinity();
         auto tid = i;
 
         // Initialize random seed for each thread
@@ -602,6 +602,7 @@ std::ostream& operator<<(std::ostream& os, const PiBench::options_t& opt)
        << "\tKey size: " << opt.key_size << "\n"
        << "\tValue size: " << opt.value_size << "\n"
        << "\tRandom seed: " << opt.rnd_seed << "\n"
+       << "\tCores to pin threads: " << PiBench::utils::stringify<uint32_t>(PiBench::utils::cores) << "\n"
        << "\tKey distribution: " << opt.key_distribution
        << (opt.key_distribution == PiBench::distribution_t::SELFSIMILAR || opt.key_distribution == PiBench::distribution_t::ZIPFIAN
                ? "(" + std::to_string(opt.key_skew) + ")"
