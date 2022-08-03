@@ -72,20 +72,6 @@ If so, you can comment the following line in `pcm/Makefile`:
 CXXFLAGS += -DPCM_USE_PERF
 ```
 
-# OpenMP
-PiBench uses OpenMP internally for multithreading.
-The environment variable `OMP_NESTED=true` must be set to guarantee correctness.
-Check [here](https://docs.microsoft.com/en-us/cpp/parallel/openmp/reference/openmp-environment-variables?view=vs-2019#omp-nested) for details.
-
-Other environment variables such as [`OMP_PLACES`](https://gnu.huihoo.org/gcc/gcc-4.9.4/libgomp/OMP_005fPLACES.html#OMP_005fPLACES) and [`OMP_PROC_BIND`](https://gnu.huihoo.org/gcc/gcc-4.9.4/libgomp/OMP_005fPROC_005fBIND.html) can be set to control the multithreaded behavior.
-
-For example:
-
-`$ OMP_PLACES=cores OMP_PROC_BIND=true OMP_NESTED=true ./PiBench [...]`
-
-Note for Clang users: you may need to additionally install OpenMP runtime, on Arch Linux this can be done by installing the package `extra/openmp`.
-
-
 # Running
 The `PiBench` executable is generated and supports the following arguments:
 ```
