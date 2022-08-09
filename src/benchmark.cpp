@@ -561,6 +561,23 @@ void benchmark_t::run() noexcept
               << "\t- Scan succeeded: " << total_success_scan/ ((double)elapsed / 1000) << " ops/s"
               << std::endl;
 
+    std::cout << "Per-thread breakdown (insert/read/update/remove/scan):\n";
+    for (auto &s : local_stats) {
+      std::cout << "\t" << s.insert_count << "/" 
+                << s.read_count << "/" 
+                << s.update_count << "/" 
+                << s.remove_count << "/" 
+                << s.scan_count << " completed" << std::endl;
+    }
+
+    for (auto &s : local_stats) {
+      std::cout << "\t" << s.success_insert_count << "/" 
+                << s.success_read_count << "/" 
+                << s.success_update_count << "/" 
+                << s.success_remove_count << "/" 
+                << s.success_scan_count << " succeeded" << std::endl;
+    }
+
     if (opt_.enable_pcm)
     {
         std::cout << "PCM Metrics:"
