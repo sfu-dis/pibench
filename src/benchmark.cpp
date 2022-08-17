@@ -285,6 +285,79 @@ void benchmark_t::load() noexcept
         }
     }
 
+    // Verify update can work
+    {
+        #pragma omp parallel num_threads(opt_.num_threads)
+        {
+            set_affinity(omp_get_thread_num());
+            // Initialize insert id for each thread
+            auto id = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+
+            #pragma omp for schedule(static)
+            for (uint64_t i = 0; i < opt_.num_records; ++i)
+            {
+                // Generate key in sequence
+                auto key_ptr = key_generator_->hash_id(id++);
+                auto value_ptr = value_generator_.from_key(id);
+
+                auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+
+                if (!r) {
+                    std::cout << "Error: update failed!" << std::endl;
+                    exit(1);
+                }
+            }
+        }
+
+        // parallel update
+        #pragma omp parallel num_threads(opt_.num_threads)
+        {
+            set_affinity(omp_get_thread_num());
+            // Initialize insert id for each thread
+            auto id = 0;
+
+            for (uint64_t i = 0; i < opt_.num_records; ++i)
+            {
+                // Generate key in sequence
+                auto key_ptr = key_generator_->hash_id(id++);
+                auto value_ptr = value_generator_.from_key(id);
+
+                auto r = tree_->update(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
+
+                if (!r) {
+                    std::cout << "Error: update failed!" << std::endl;
+                    exit(1);
+                }
+            }
+        }
+
+        #pragma omp parallel num_threads(opt_.num_threads)
+        {
+            set_affinity(omp_get_thread_num());
+            // Initialize insert id for each thread
+            auto id = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+
+            #pragma omp for schedule(static)
+            for (uint64_t i = 0; i < opt_.num_records; ++i)
+            {
+                // Generate key in sequence
+                auto key_ptr = key_generator_->hash_id(id++);
+                auto value_ptr = value_generator_.from_key(id);
+
+                static thread_local char value_out[value_generator_t::VALUE_MAX];
+                bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
+                if (!found) {
+                    std::cout << "Error: missing key (after update)!" << std::endl;
+                    exit(1);
+                }
+                if (memcmp(value_ptr, value_out, opt_.value_size)) {
+                    std::cout << "Error: key (after update) mapped to wrong value" << std::endl;
+                    exit(1);
+                }
+            }
+        }
+    }
+
     std::cout << "Load verified; benchmark started." << std::endl;
 }
 
