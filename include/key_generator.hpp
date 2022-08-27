@@ -200,5 +200,79 @@ protected:
         return rdtsc();
     }
 };
+
+class pseudo_selfsimilar_key_generator_t final : public key_generator_t
+{
+    class piecewise_linear_evaluator {
+    private:
+        static constexpr uint32_t POINTS_MAX = 128;
+        std::pair<double, double> points_[POINTS_MAX];
+        size_t n_;
+
+    public:
+        piecewise_linear_evaluator(double skew, size_t n) : n_(n + 2) {
+            points_[0] = {0.0, 0.0};
+            for (size_t i = 0; i < n; ++i) {
+                double x = (double)i / n;
+                double y = std::pow(x, std::log(skew) / std::log(1.0 - skew));
+                points_[i + 1] = {x, y};
+            }
+            points_[n + 1] = {1.0, 1.0};
+        }
+
+        double eval(double x) {
+            for (size_t i = 1; i < n_; ++i) {
+                if (x < points_[i].first) {
+                return points_[i - 1].second + (points_[i].second - points_[i - 1].second) *
+                                                    (x - points_[i - 1].first) /
+                                                    (points_[i].first - points_[i - 1].first);
+                }
+            }
+            return 1.0;
+        }
+    };
+public:
+    pseudo_selfsimilar_key_generator_t(size_t N, size_t size, size_t num_points, size_t step, bool apply_hash = true,
+                                      const std::string& prefix = "", float skew = 0.2)
+        : dist_(0, N - 1),
+          key_generator_t(N, size, apply_hash, prefix),
+          evaluator_(skew, num_points),
+          skew_(skew), stop_(N), step_(step)
+    {
+    }
+
+    virtual const char* next(bool in_sequence = false) override;
+
+    void set_start(size_t start) {
+        start_ = start;
+    }
+
+protected:
+    uint64_t eval(uint64_t idx)
+    {
+        double x = (double)idx / stop_;
+        double y = evaluator_.eval(x);
+        return y * std::numeric_limits<uint64_t>::max();
+    }
+
+    uint64_t next_id_in_sequence()
+    {
+        uint64_t idx = start_;
+        start_ += step_;
+        return eval(idx);
+    }
+
+    virtual uint64_t next_id() override
+    {
+        return eval(dist_(generator_));
+    }
+
+private:
+    std::uniform_int_distribution<uint64_t> dist_;
+    piecewise_linear_evaluator evaluator_;
+    const double skew_;
+    const uint64_t stop_, step_;
+    inline static thread_local size_t start_;
+};
 } // namespace PiBench
 #endif

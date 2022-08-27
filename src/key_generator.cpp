@@ -85,4 +85,18 @@ const char* rdtsc_key_generator_t::next(bool in_sequence)
     uint64_t id = next_id();
     return hash_id(id);
 }
+
+const char* pseudo_selfsimilar_key_generator_t::next(bool in_sequence)
+{
+    uint64_t id = -1;
+    if (in_sequence)
+    {
+      id = next_id_in_sequence();
+    }
+    else
+    {
+      id = next_id();
+    }
+    return hash_id(id);
+}
 } // namespace PiBench

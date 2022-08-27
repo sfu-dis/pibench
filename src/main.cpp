@@ -171,10 +171,12 @@ int main(int argc, char** argv)
             }
             else if(dist.compare("rdtsc") == 0)
                 opt.key_distribution = distribution_t::RDTSC;
+            else if(dist.compare("pseudoselfsimilar") == 0)
+                opt.key_distribution = distribution_t::PSEUDOSELFSIMILAR;
             else
             {
                 std::cout << "Invalid key distribution, must be one of "
-                << "[UNIFORM | SELFSIMILAR | ZIPFIAN | RDTSC], but is " << dist << std::endl;
+                << "[UNIFORM | SELFSIMILAR | ZIPFIAN | RDTSC | PSEUDOSELFSIMILAR], but is " << dist << std::endl;
                 exit(1);
             }
         }
@@ -310,9 +312,15 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    if(opt.key_distribution == distribution_t::RDTSC && !opt.skip_verify)
+    if(opt.key_distribution == distribution_t::PSEUDOSELFSIMILAR && (opt.key_skew < 0.0 || opt.key_skew > 0.5))
     {
-        std::cout << "Verify phase should be skipped with RDTSC." << std::endl;
+        std::cout << "Skew factor must be in the range [0 , 0.5]." << std::endl;
+        exit(1);
+    }
+
+    if((opt.key_distribution == distribution_t::RDTSC | opt.key_distribution == distribution_t::PSEUDOSELFSIMILAR) && !opt.skip_verify)
+    {
+        std::cout << "Verify phase should be skipped with RDTSC or PSEUDOSELFSIMILAR." << std::endl;
         exit(1);
     }
 

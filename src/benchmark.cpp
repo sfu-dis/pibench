@@ -123,6 +123,10 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
         key_generator_ = std::make_unique<rdtsc_key_generator_t>(key_space_sz, opt_.key_size, opt_.apply_hash, opt_.key_prefix);
         break;
 
+    case distribution_t::PSEUDOSELFSIMILAR:
+        key_generator_ = std::make_unique<pseudo_selfsimilar_key_generator_t>(key_space_sz, opt_.key_size, 64, opt_.num_threads, opt_.apply_hash, opt_.key_prefix, opt_.key_skew);
+        break;
+
     default:
         std::cout << "Error: unknown distribution!" << std::endl;
         exit(0);
@@ -187,6 +191,12 @@ void benchmark_t::load() noexcept
             set_affinity(omp_get_thread_num());
             // Initialize insert id for each thread
             key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+
+            auto pseudo_selfsimilar = dynamic_cast<pseudo_selfsimilar_key_generator_t *>(key_generator_.get());
+            if (pseudo_selfsimilar)
+            {
+                pseudo_selfsimilar->set_start(omp_get_thread_num());
+            }
 
 #if defined(EPOCH_BASED_RECLAMATION)
             ART::ThreadInfo t(epoch_);
@@ -757,6 +767,9 @@ std::ostream& operator<<(std::ostream& os, const PiBench::distribution_t& dist)
     case PiBench::distribution_t::RDTSC:
         return os << "RDTSC";
         break;
+    case PiBench::distribution_t::PSEUDOSELFSIMILAR:
+        return os << "PSEUDOSELFSIMILAR";
+        break;
     default:
         return os << static_cast<uint8_t>(dist);
     }
@@ -777,7 +790,7 @@ std::ostream& operator<<(std::ostream& os, const PiBench::options_t& opt)
        << "\tValue size: " << opt.value_size << "\n"
        << "\tRandom seed: " << opt.rnd_seed << "\n"
        << "\tKey distribution: " << opt.key_distribution
-       << (opt.key_distribution == PiBench::distribution_t::SELFSIMILAR || opt.key_distribution == PiBench::distribution_t::ZIPFIAN
+       << (opt.key_distribution == PiBench::distribution_t::SELFSIMILAR || opt.key_distribution == PiBench::distribution_t::ZIPFIAN || opt.key_distribution == PiBench::distribution_t::PSEUDOSELFSIMILAR
                ? "(" + std::to_string(opt.key_skew) + ")"
                : "")
        << "\n"
