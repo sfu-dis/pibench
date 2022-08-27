@@ -101,10 +101,26 @@ public:
 
     virtual uint64_t next_id() = 0;
 
+    void set_step(size_t step)
+    {
+        step_ = step;
+    }
+
+    static void set_start(size_t start)
+    {
+        start_ = start;
+    }
 protected:
 
     /// Engine used for generating random numbers.
     static thread_local std::default_random_engine generator_;
+
+    uint64_t next_id_in_sequence()
+    {
+        uint64_t idx = start_;
+        start_ += step_;
+        return idx;
+    }
 
 private:
     /// Seed used for generating random numbers.
@@ -126,6 +142,9 @@ private:
     const std::string prefix_;
 
     //uint64_t current_id_ = 0;
+    uint64_t step_;
+
+    inline static thread_local size_t start_;
 };
 
 class uniform_key_generator_t final : public key_generator_t

@@ -24,7 +24,7 @@ const char* key_generator_t::next(bool in_sequence)
     uint64_t id = -1;
     if (in_sequence)
     {
-      id = current_id_++;
+      id = next_id_in_sequence();
     }
     else
     {

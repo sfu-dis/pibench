@@ -182,11 +182,15 @@ void benchmark_t::load() noexcept
     }
     else
     {
+        key_generator_->set_step(opt_.num_threads);
+
         #pragma omp parallel num_threads(opt_.num_threads)
         {
             set_affinity(omp_get_thread_num());
             // Initialize insert id for each thread
             key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
+
+            key_generator_->set_start(omp_get_thread_num());
 
 #if defined(EPOCH_BASED_RECLAMATION)
             ART::ThreadInfo t(epoch_);
