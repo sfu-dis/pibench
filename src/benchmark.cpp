@@ -429,6 +429,8 @@ void benchmark_t::run() noexcept
                     else
                     {
                         auto id = key_generator_->next_id();
+#if 0
+                        // XXX(shiges): Ignore this in pseudo-self-similar.
                         if (opt_.bm_mode == mode_t::Time)
                         {
                             // Scale back to insert amount
@@ -438,6 +440,7 @@ void benchmark_t::run() noexcept
                                 id = opt_.num_records + inserts_per_thread * (ins / local_stats[tid].success_insert_count) + ins % local_stats[tid].success_insert_count;
                             }
                         }
+#endif
                         key_ptr = key_generator_->hash_id(id);
                     }
 
