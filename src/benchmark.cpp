@@ -399,6 +399,8 @@ void benchmark_t::run() noexcept
                 // Initialize insert id for each thread
                 key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
 
+                key_generator_->set_start(opt_.num_records + tid);
+
                 foedus::assorted::BernoulliRandom random_bool(opt_.latency_sampling,
                                                               opt_.rnd_seed * (tid + 1));
 
