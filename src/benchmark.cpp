@@ -151,6 +151,13 @@ void benchmark_t::load() noexcept
     if (opt_.bulk_load)
     {
         std::cout << "Bulk loading..." << std::endl;
+        tree_->tls_setup();
+#if defined(EPOCH_BASED_RECLAMATION)
+        ART::ThreadInfo t(epoch_);
+        uint32_t epoch_ops_threshold_count = 0;
+        epoch_.enterEpoche(t);
+#endif
+
         size_t num_bytes = opt_.num_records * (key_generator_->size() + opt_.value_size);
         char *kv_pairs = (char *)aligned_alloc(64, num_bytes);
         char *pos = kv_pairs;
@@ -179,6 +186,10 @@ void benchmark_t::load() noexcept
             std::cout << "Bulk loading failed!" << std::endl;
             exit(1);
         }
+
+#if defined(EPOCH_BASED_RECLAMATION)
+        epoch_.exitEpocheAndCleanup(t);
+#endif
     }
     else
     {
@@ -188,6 +199,7 @@ void benchmark_t::load() noexcept
             // Initialize insert id for each thread
             key_generator_->current_id_ = opt_.num_records / opt_.num_threads * omp_get_thread_num();
 
+            tree_->tls_setup();
 #if defined(EPOCH_BASED_RECLAMATION)
             ART::ThreadInfo t(epoch_);
             uint32_t epoch_ops_threshold_count = 0;
@@ -238,6 +250,7 @@ void benchmark_t::load() noexcept
             // Initialize insert id for each thread
             auto id = opt_.num_records / opt_.num_threads * omp_get_thread_num();
 
+            tree_->tls_setup();
             #pragma omp for schedule(static)
             for (uint64_t i = 0; i < opt_.num_records; ++i)
             {
@@ -388,6 +401,8 @@ void benchmark_t::run() noexcept
             {
                 auto tid = omp_get_thread_num();
                 set_affinity(tid);
+
+                tree_->tls_setup();
 
                 // Initialize random seed for each thread
                 key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
