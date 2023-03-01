@@ -104,7 +104,7 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
         }
     }
 
-    size_t key_space_sz = opt_.num_records + (opt_.num_ops * opt_.insert_ratio);
+    size_t key_space_sz = opt_.num_records;
     switch (opt_.key_distribution)
     {
     case distribution_t::UNIFORM:
@@ -255,7 +255,7 @@ void benchmark_t::load() noexcept
             for (uint64_t i = 0; i < opt_.num_records; ++i)
             {
                 // Generate key in sequence
-                auto key_ptr = key_generator_->hash_id(id++);
+                auto key_ptr = key_generator_->hash_id(2 * id++);
 
                 static thread_local char value_out[value_generator_t::VALUE_MAX];
                 bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
@@ -427,21 +427,11 @@ void benchmark_t::run() noexcept
 
                     // Generate random scrambled key
                     const char *key_ptr = nullptr;
-                    if (op == operation_t::INSERT)
-                    {
-                        key_ptr = key_generator_->next(true);
-                    }
-                    else
                     {
                         auto id = key_generator_->next_id();
-                        if (opt_.bm_mode == mode_t::Time)
-                        {
-                            // Scale back to insert amount
-                            id %= (local_stats[tid].success_insert_count * opt_.num_threads + opt_.num_records);
-                            if (id >= opt_.num_records) {
-                                uint64_t ins = id - opt_.num_records;
-                                id = opt_.num_records + inserts_per_thread * (ins / local_stats[tid].success_insert_count) + ins % local_stats[tid].success_insert_count;
-                            }
+                        id = id * 2;
+                        if (op == operation_t::INSERT || op == operation_t::REMOVE) {
+                            id++;
                         }
                         key_ptr = key_generator_->hash_id(id);
                     }

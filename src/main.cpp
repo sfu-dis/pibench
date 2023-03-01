@@ -214,8 +214,8 @@ int main(int argc, char** argv)
             {
                 opt.bm_mode = PiBench::mode_t::Time;
 
-                std::cout << "Time-based benchmark selected - changing key space to +inf" << std::endl;
-                opt.num_ops = std::numeric_limits<int64_t>::max();
+                // std::cout << "Time-based benchmark selected - changing key space to +inf" << std::endl;
+                // opt.num_ops = std::numeric_limits<int64_t>::max();
             }
             else
             {

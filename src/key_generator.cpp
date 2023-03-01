@@ -25,11 +25,13 @@ const char* key_generator_t::next(bool in_sequence)
     if (in_sequence)
     {
       id = current_id_++;
+      id = id * 2;
     }
     else
     {
       //if opt_.bm_mode == mode_t::Operation  
-      id = next_id();
+      id = current_id_++;
+      id = id * 2 + 1;
     }
     return hash_id(id);
 }
