@@ -16,6 +16,8 @@
 #include <sys/utsname.h>    // uname
 #include <sys/wait.h>       // waitpid
 
+const size_t *cpu_ids = nullptr;
+
 namespace PiBench
 {
 

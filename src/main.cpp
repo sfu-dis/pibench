@@ -2,6 +2,7 @@
 #include "benchmark.hpp"
 #include "library_loader.hpp"
 #include "cxxopts.hpp"
+#include "sched.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -54,6 +55,7 @@ int main(int argc, char** argv)
             ("seconds","Time (seconds) PiBench run in time-based mode",cxxopts::value<float>()->default_value(std::to_string(opt.seconds)))
             ("epoch_ops_threshold","Number of operations before exiting/re-entering epochs",cxxopts::value<uint32_t>()->default_value(std::to_string(opt.epoch_ops_threshold)))
             ("epoch_gc_threshold","Number of deletions before performing garbage collection",cxxopts::value<uint32_t>()->default_value(std::to_string(opt.epoch_gc_threshold)))
+            ("schedule","Thread-CPU allocation", cxxopts::value<std::string>()->default_value("NUMA"))
             ("enable_perf", "Enable perf", cxxopts::value<bool>()->default_value((opt.enable_perf ? "true" : "false")))
             ("perf_record_args", "Arguments to perf-record", cxxopts::value<std::string>()->default_value(""))
             ("help", "Print help")
@@ -244,6 +246,34 @@ int main(int argc, char** argv)
         // Parse "epoch_gc_threshold"
         if (result.count("epoch_gc_threshold"))
             opt.epoch_gc_threshold = result["epoch_gc_threshold"].as<uint32_t>();
+
+         // Parse "schedule"
+        if (result.count("schedule"))
+        {
+            std::string schedule = result["schedule"].as<std::string>();
+            std::transform(schedule.begin(),schedule.end(),schedule.begin(),::tolower);
+            if(schedule.compare("numa") == 0)
+            {
+                std::cout << "NUMA CPU affinity selected" << std::endl;
+                cpu_ids = numa_cpu_ids;
+            }
+            else if(schedule.compare("compact") == 0)
+            {
+                std::cout << "Compact affinity selected" << std::endl;
+                cpu_ids = compact_cpu_ids;
+            }
+            else
+            {
+                std::cout << "Schedule must be one of [NUMA | COMPACT]" << std::endl;
+                exit(1);
+            }
+        }
+        else
+        {
+            // Default schedule is NUMA
+            std::cout << "CPU affinity not selected - default to NUMA" << std::endl;
+            cpu_ids = numa_cpu_ids;
+        }
 
         // Parse "enable_perf"
         if (result.count("enable_perf"))

@@ -21,16 +21,24 @@ static constexpr size_t cpu_ids[] = {
 */
 
 
-static constexpr size_t cpu_ids[] = {
+static constexpr size_t numa_cpu_ids[] = {
    0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38,
    1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39,
    40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78,
    41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 73, 75, 77, 79,
 };
 
+static constexpr size_t compact_cpu_ids[] = {
+   0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38,
+   40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78,
+   1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39,
+   41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63, 65, 67, 69, 71, 73, 75, 77, 79,
+};
+
+extern const size_t *cpu_ids;
 
 static void set_affinity(uint32_t thread_id) {
-  int my_cpu_id = cpu_ids[thread_id % (sizeof(cpu_ids) / sizeof(cpu_ids[0]))];
+  int my_cpu_id = cpu_ids[thread_id % (sizeof(numa_cpu_ids) / sizeof(numa_cpu_ids[0]))];
   cpu_set_t my_set;
   CPU_ZERO(&my_set);
   CPU_SET(my_cpu_id, &my_set);
