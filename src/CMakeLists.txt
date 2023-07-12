@@ -4,6 +4,7 @@ set(pibench_SRC
     benchmark.cpp
     operation_generator.cpp
     value_generator.cpp
+    sched.cpp
 )
 
 add_library(pibench ${pibench_SRC})
@@ -12,7 +13,7 @@ target_compile_options(pibench PRIVATE ${OpenMP_CXX_FLAGS})
 target_link_libraries(pibench PRIVATE
     ${OpenMP_CXX_FLAGS}
     ${PROJECT_SOURCE_DIR}/pcm/libPCM.a
-    dl)
+    numa dl)
 
 if(PIBENCH_USE_EPOCH_BASED_RECLAMATION)
   target_compile_options(pibench PUBLIC -DEPOCH_BASED_RECLAMATION)

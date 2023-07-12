@@ -2,6 +2,7 @@
 #include "benchmark.hpp"
 #include "library_loader.hpp"
 #include "cxxopts.hpp"
+#include "sched.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -14,6 +15,11 @@ using namespace PiBench;
 
 int main(int argc, char** argv)
 {
+    if (!DetectCPUCores()) {
+        std::cerr << "Error: Failed to detect CPU topology" << std::endl;
+        return -1;
+    }
+
     // Parse command line arguments
     options_t opt;
     tree_options_t tree_opt;
