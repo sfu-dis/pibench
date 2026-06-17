@@ -94,9 +94,6 @@ struct options_t
     /// Master seed to be used for random generations.
     uint32_t rnd_seed = 1729;
 
-    /// Whether to enable Intel PCM for profiling.
-    bool enable_pcm = true;
-
     /// Whether to skip the load phase.
     bool skip_load = false;
 
@@ -201,7 +198,7 @@ public:
     static constexpr size_t MAX_SCAN = 1000;
 
 private:
-    void run_op(operation_t op, const char *key_ptr, 
+    void run_op(operation_t op, const char *key_ptr,
                 char *value_out, char *values_out, bool measure_latency,
                 stats_t &stats);
 
@@ -219,9 +216,6 @@ private:
 
     /// Value generator.
     value_generator_t value_generator_;
-
-    /// Intel PCM handler.
-    void* pcm_;
 };
 } // namespace PiBench
 

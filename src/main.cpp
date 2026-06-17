@@ -42,7 +42,6 @@ int main(int argc, char** argv)
             ("distribution", "Key distribution to use", cxxopts::value<std::string>()->default_value("UNIFORM"))
             ("skew", "Key distribution skew factor to use", cxxopts::value<float>()->default_value(std::to_string(opt.key_skew)))
             ("seed", "Seed for random generators", cxxopts::value<uint32_t>()->default_value(std::to_string(opt.rnd_seed)))
-            ("pcm", "Turn on Intel PCM", cxxopts::value<bool>()->default_value((opt.enable_pcm ? "true" : "false")))
             ("pool_path", "Path to persistent pool", cxxopts::value<std::string>()->default_value("\"" + tree_opt.pool_path + "\""))
             ("pool_size", "Size of persistent pool (in Bytes)", cxxopts::value<uint64_t>()->default_value(std::to_string(tree_opt.pool_size)))
             ("skip_load", "Skip the load phase", cxxopts::value<bool>()->default_value((opt.skip_load ? "true" : "false")))
@@ -59,11 +58,6 @@ int main(int argc, char** argv)
         {
             std::cout << options.help() << std::endl;
             exit(0);
-        }
-
-        if (result.count("pcm"))
-        {
-            opt.enable_pcm = result["pcm"].as<bool>();
         }
 
         if (result.count("skip_load"))

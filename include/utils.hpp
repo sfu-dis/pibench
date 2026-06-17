@@ -114,7 +114,7 @@ namespace utils
      * @return true
      * @return false
      */
-    static bool is_big_endian(void)
+    inline bool is_big_endian(void)
     {
         volatile union {
             uint32_t i;
@@ -136,9 +136,9 @@ namespace utils
      * @param addr beginning of memory region.
      * @param size size of memory region.
      */
-    static void dummy_use(void* addr, size_t size)
+    inline void dummy_use(void* addr, size_t size)
     {
-        char* p = static_cast<char*>(p);
+        char* p = static_cast<char*>(addr);
         char* end = static_cast<char*>(p) + size;
 
         if(p >= end)

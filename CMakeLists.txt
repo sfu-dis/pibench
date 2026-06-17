@@ -11,6 +11,7 @@ if(COMPILER_SUPPORTS_MARCH_NATIVE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
+option(PIBENCH_BUILD_TESTING "Build test suite" OFF)
 option(PIBENCH_BUILD_LEVELDB "Build LevelDB wrapper" OFF)
 
 include(CTest)
@@ -40,10 +41,10 @@ include_directories("${PROJECT_SOURCE_DIR}/include")
 
 add_subdirectory(src)
 
-if(BUILD_TESTING)
+if(PIBENCH_BUILD_TESTING)
     add_subdirectory(googletest)
     add_subdirectory(tests)
-endif()
+endif(PIBENCH_BUILD_TESTING)
 
 if(PIBENCH_BUILD_LEVELDB)
   add_subdirectory(wrappers/leveldb)

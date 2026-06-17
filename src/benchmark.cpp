@@ -82,15 +82,8 @@ benchmark_t::benchmark_t(tree_api* tree, const options_t& opt) noexcept
     : tree_(tree),
       opt_(opt),
       op_generator_(opt.read_ratio, opt.insert_ratio, opt.update_ratio, opt.remove_ratio, opt.scan_ratio),
-      value_generator_(opt.value_size),
-      pcm_(nullptr)
+      value_generator_(opt.value_size)
 {
-    if (opt.enable_pcm)
-    {
-        std::cout << "Error: PCM is not supported!" << std::endl;
-        exit(0);
-    }
-
     size_t key_space_sz = opt_.num_records + (opt_.num_ops * opt_.insert_ratio);
     switch (opt_.key_distribution)
     {
@@ -171,6 +164,9 @@ void benchmark_t::load() noexcept
                 static thread_local char value_out[value_generator_t::VALUE_MAX];
                 bool found = tree_->find(key_ptr, key_generator_->size(), value_out);
                 if (!found) {
+                    std::cout << "Load verification failed; "
+                              << "key that was previously inserted no longer exists. "
+                              << "Aborting." << std::endl;
                     exit(1);
                 }
             }
@@ -321,7 +317,6 @@ void benchmark_t::run() noexcept
                 }
                 else
                 {
-                    uint32_t slept = 0;
                     do
                     {
                         execute_op();
@@ -416,9 +411,9 @@ void benchmark_t::run() noexcept
 
     std::cout << "Results:\n";
     std::cout << "\tOperations: " << total_ops << std::endl;
-    std::cout << "\tThroughput:\n" 
-              << "\t- Completed: " << total_ops / ((double)elapsed / 1000) << " ops/s\n" 
-              << "\t- Succeeded: " << total_success_ops / ((double)elapsed / 1000) << " ops/s\n" 
+    std::cout << "\tThroughput:\n"
+              << "\t- Completed: " << total_ops / ((double)elapsed / 1000) << " ops/s\n"
+              << "\t- Succeeded: " << total_success_ops / ((double)elapsed / 1000) << " ops/s\n"
               << "\tBreakdown:\n"
               << "\t- Insert completed: " << total_insert / ((double)elapsed / 1000) << " ops/s\n"
               << "\t- Insert succeeded: " << total_success_insert / ((double)elapsed / 1000) << " ops/s\n"
@@ -464,7 +459,7 @@ void benchmark_t::run() noexcept
     }
 }
 
-void benchmark_t::run_op(operation_t op, const char *key_ptr, 
+void benchmark_t::run_op(operation_t op, const char *key_ptr,
                          char *value_out, char *values_out, bool measure_latency,
                          stats_t &stats)
 {
