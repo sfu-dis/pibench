@@ -139,6 +139,7 @@ void benchmark_t::load() noexcept
 
                 auto r = tree_->insert(key_ptr, key_generator_->size(), value_ptr, opt_.value_size);
                 assert(r);
+                (void)r;
             }
         }
 
@@ -210,130 +211,125 @@ void benchmark_t::run() noexcept
 
     double elapsed = 0.0;
     stopwatch_t sw;
-    omp_set_nested(true);
-    #pragma omp parallel sections num_threads(2)
-    {
-        #pragma omp section // Monitor thread
-        {
-            std::chrono::milliseconds sampling_window(opt_.sampling_ms);
-            auto sample_stats = [&]()
-            {
-                std::this_thread::sleep_for(sampling_window);
-                stats_t s;
-                s.operation_count = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
-                                                    [](uint64_t sum, const stats_t& curr) {
-                                                        return sum + curr.operation_count;
-                                                    });
-                global_stats.push_back(std::move(s));
-            };
 
-            if (opt_.bm_mode == mode_t::Operation)
+    std::thread monitor([&]()
+    {
+        std::chrono::milliseconds sampling_window(opt_.sampling_ms);
+        auto sample_stats = [&]()
+        {
+            std::this_thread::sleep_for(sampling_window);
+            stats_t s;
+            s.operation_count = std::accumulate(local_stats.begin(), local_stats.end(), 0ull,
+                                                [](uint64_t sum, const stats_t& curr) {
+                                                    return sum + curr.operation_count;
+                                                });
+            global_stats.push_back(std::move(s));
+        };
+
+        if (opt_.bm_mode == mode_t::Operation)
+        {
+            while (!finished)
             {
-                while (!finished)
-                {
-                    sample_stats();
-                }
+                sample_stats();
+            }
+        }
+        else
+        {
+            uint32_t iterations = opt_.seconds * 1000 / opt_.sampling_ms;
+            uint32_t slept = 0;
+            do {
+                sample_stats();
+            }
+            while (++slept < iterations);
+            finished = true;
+        }
+    });
+
+    #pragma omp parallel num_threads(opt_.num_threads)
+    {
+        auto tid = omp_get_thread_num();
+
+        // Initialize random seed for each thread
+        key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
+
+        // Initialize insert id for each thread
+        key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
+
+        auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
+
+        #pragma omp barrier
+
+        #pragma omp single nowait
+        {
+            sw.start();
+        }
+
+        auto execute_op = [&]()
+        {
+            // Generate random operation
+            auto op = op_generator_.next();
+
+            // Generate random scrambled key
+            const char *key_ptr = nullptr;
+            if (op == operation_t::INSERT)
+            {
+                key_ptr = key_generator_->next(true);
             }
             else
             {
-                uint32_t iterations = opt_.seconds * 1000 / opt_.sampling_ms;
-                uint32_t slept = 0;
-                do {
-                    sample_stats();
+                auto id = key_generator_->next_id();
+                if (opt_.bm_mode == mode_t::Time)
+                {
+                    // Scale back to insert amount
+                    id %= (local_stats[tid].success_insert_count * opt_.num_threads + opt_.num_records);
+                    if (id >= opt_.num_records) {
+                        uint64_t ins = id - opt_.num_records;
+                        id = opt_.num_records + inserts_per_thread * (ins / local_stats[tid].success_insert_count) + ins % local_stats[tid].success_insert_count;
+                    }
                 }
-                while (++slept < iterations);
-                finished = true;
+                key_ptr = key_generator_->hash_id(id);
+            }
+
+            auto measure_latency = random_bool();
+            if (measure_latency)
+            {
+                local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
+            }
+
+            run_op(op, key_ptr, value_out, values_out, measure_latency, local_stats[tid]);
+
+            if (measure_latency)
+            {
+                local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
+            }
+        };
+
+        if (opt_.bm_mode == mode_t::Operation)
+        {
+            #pragma omp for schedule(static)
+            for (uint64_t i = 0; i < opt_.num_ops; ++i)
+            {
+                execute_op();
             }
         }
-
-        #pragma omp section // Worker threads
+        else
         {
-            #pragma omp parallel num_threads(opt_.num_threads)
+            do
             {
-                auto tid = omp_get_thread_num();
-
-                // Initialize random seed for each thread
-                key_generator_->set_seed(opt_.rnd_seed * (tid + 1));
-
-                // Initialize insert id for each thread
-                key_generator_->current_id_ = current_id + (inserts_per_thread * tid);
-
-                auto random_bool = std::bind(std::bernoulli_distribution(opt_.latency_sampling), std::knuth_b());
-
-                #pragma omp barrier
-
-                #pragma omp single nowait
-                {
-                    sw.start();
-                }
-
-                auto execute_op = [&]()
-                {
-                    // Generate random operation
-                    auto op = op_generator_.next();
-
-                    // Generate random scrambled key
-                    const char *key_ptr = nullptr;
-                    if (op == operation_t::INSERT)
-                    {
-                        key_ptr = key_generator_->next(true);
-                    }
-                    else
-                    {
-                        auto id = key_generator_->next_id();
-                        if (opt_.bm_mode == mode_t::Time)
-                        {
-                            // Scale back to insert amount
-                            id %= (local_stats[tid].success_insert_count * opt_.num_threads + opt_.num_records);
-                            if (id >= opt_.num_records) {
-                                uint64_t ins = id - opt_.num_records;
-                                id = opt_.num_records + inserts_per_thread * (ins / local_stats[tid].success_insert_count) + ins % local_stats[tid].success_insert_count;
-                            }
-                        }
-                        key_ptr = key_generator_->hash_id(id);
-                    }
-
-                    auto measure_latency = random_bool();
-                    if (measure_latency)
-                    {
-                        local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
-                    }
-
-                    run_op(op, key_ptr, value_out, values_out, measure_latency, local_stats[tid]);
-
-                    if (measure_latency)
-                    {
-                        local_stats[tid].times.push_back(std::chrono::high_resolution_clock::now());
-                    }
-                };
-
-                if (opt_.bm_mode == mode_t::Operation)
-                {
-                    #pragma omp for schedule(static)
-                    for (uint64_t i = 0; i < opt_.num_ops; ++i)
-                    {
-                        execute_op();
-                    }
-                }
-                else
-                {
-                    do
-                    {
-                        execute_op();
-                    }
-                    while (!finished);
-                }
-
-                // Get elapsed time and signal monitor thread to finish.
-                #pragma omp single nowait
-                {
-                    elapsed = sw.elapsed<std::chrono::milliseconds>();
-                    finished = true;
-                }
+                execute_op();
             }
+            while (!finished);
+        }
+
+        // Get elapsed time and signal monitor thread to finish.
+        #pragma omp single nowait
+        {
+            elapsed = sw.elapsed<std::chrono::milliseconds>();
+            finished = true;
         }
     }
-    omp_set_nested(false);
+
+    monitor.join();
 
     std::cout << std::fixed << std::setprecision(4);
     std::cout << "\tRun time: " << elapsed << " milliseconds" << std::endl;

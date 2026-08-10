@@ -67,14 +67,16 @@ $ make
 # OpenMP
 
 PiBench uses OpenMP internally for multithreading.
-The environment variable `OMP_NESTED=true` must be set to guarantee correctness.
-Check [here](https://docs.microsoft.com/en-us/cpp/parallel/openmp/reference/openmp-environment-variables?view=vs-2019#omp-nested) for details.
 
 Other environment variables such as [`OMP_PLACES`](https://gnu.huihoo.org/gcc/gcc-4.9.4/libgomp/OMP_005fPLACES.html#OMP_005fPLACES) and [`OMP_PROC_BIND`](https://gnu.huihoo.org/gcc/gcc-4.9.4/libgomp/OMP_005fPROC_005fBIND.html) can be set to control the multithreaded behavior.
 
-For example:
+For example, to pin each worker thread to a specific core:
 
-`$ OMP_PLACES=cores OMP_PROC_BIND=true OMP_NESTED=true ./PiBench [...]`
+`$ OMP_PLACES=cores OMP_PROC_BIND=true ./PiBench [...]`
+
+Or to pin each worker thread to a specific set of CPUs, e.g., corresponding to a specific NUMA node or multiple NUMA nodes:
+
+`$ OMP_PLACES="{0:10}" OMP_PROC_BIND=true ./PiBench --threads 10 [...]`
 
 Note for Clang users: you may need to additionally install OpenMP runtime, on Arch Linux this can be done by installing the package `extra/openmp`.
 
